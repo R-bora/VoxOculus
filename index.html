@@ -187,7 +187,7 @@
     .test-counter { font-size: 14px; color: #8892b0; margin-top: 10px; }
 
     /* Typography & Inputs */
-    #topic { font-size: 22px; color: #f7c948; margin: 20px 0 10px 0; }
+    #topic { font-size: 22px; color: #f7c948; margin: 20px 0 10px 0; line-height: 1.4; }
     #countdown { font-size: 32px; font-weight: bold; margin-bottom: 15px; }
     textarea {
         width: 100%;
@@ -460,6 +460,10 @@
                 <div class="stat-title">Eye Contact Consistency</div>
                 <div class="stat-value" id="eye-contact-result">0%</div>
             </div>
+            <div class="stat-box">
+                <div class="stat-title">Topic Relevance Alignment</div>
+                <div class="stat-value" id="relevance-result">0%</div>
+            </div>
         </div>
         <div class="overall-score-container">
             <div class="overall-score-title">Overall Combined Performance Score</div>
@@ -485,6 +489,7 @@
     let testCount = parseInt(localStorage.getItem('voiceAnalyzer_testCount')) || 0;
     const MAX_FREE_TESTS = 3;
     let isLoggedIn = localStorage.getItem('voiceAnalyzer_isLoggedIn') === 'true'; 
+    let currentRawPromptTopic = ""; // Tracks active context for semantic testing
 
     // --- FIREBASE CONFIGURATION ---
     const firebaseConfig = {
@@ -534,11 +539,11 @@
     
     let lockedTranscript = ""; 
     let currentSessionTranscript = "";
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
-        recognition.continuous = !isMobile; 
+        
+        recognition.continuous = true; 
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
@@ -561,6 +566,9 @@
             if (event.error === 'not-allowed') {
                 triggerNotification("Microphone blocked! Please allow mic access in your browser.", "error");
             } 
+            if (event.error === 'aborted' && isTrackingActive) {
+                console.log("Speech context aborted. Attempting recovery...");
+            }
         };
 
         recognition.onend = () => {
@@ -568,12 +576,15 @@
                 lockedTranscript += currentSessionTranscript + " ";
             }
             currentSessionTranscript = ""; 
+            
             if (isTrackingActive) {
-                try {
-                    recognition.start();
-                } catch (err) {
-                    console.log("Mic loop restarted.");
-                }
+                setTimeout(() => {
+                    try {
+                        if (isTrackingActive) recognition.start();
+                    } catch (err) {
+                        console.log("Mic loop safely recovered.");
+                    }
+                }, 300);
             }
         };
     } else {
@@ -731,6 +742,7 @@
                 const errorDiv = document.getElementById('login-error');
                 errorDiv.innerText = "Google Sign-In failed or was cancelled.";
                 errorDiv.style.display = 'block';
+                triggerNotification("Authentication failed.", "error");
             });
     }
 
@@ -755,11 +767,10 @@
         }
     }
 
-    // --- NEW: DYNAMIC GOOGLE TRENDS / NEWS TOPIC GENERATOR ---
+    // --- DYNAMIC GOOGLE TRENDS / NEWS TOPIC GENERATOR ---
     async function fetchLiveTrendingTopic() {
         document.getElementById("topic").innerText = "Generating live trending topic...";
         
-        // Using a CORS proxy to pull live, real-time main news items from a safe global headlines feed
         const targetRss = "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVd3U00xOWhNutIBR2dCR2V3b0FQAQ?hl=en-US&gl=US&ceid=US:en";
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetRss)}`;
 
@@ -773,26 +784,24 @@
             const items = xmlDoc.getElementsByTagName("item");
             
             if (items.length > 0) {
-                // Select a random highly-discussed item out of the top live headings
                 const randomIndex = Math.floor(Math.random() * Math.min(items.length, 15));
                 let rawHeadline = items[randomIndex].getElementsByTagName("title")[0].textContent;
-                
-                // Clean up any trailing news source labels (e.g., "- Reuters")
                 let cleanedTopic = rawHeadline.split(" - ")[0];
-                
+                currentRawPromptTopic = cleanedTopic; // Store raw text target
                 return `Analyze and share your thoughts on this trending global headline: "${cleanedTopic}"`;
             }
         } catch (err) {
             console.error("CORS Feed fallback active:", err);
         }
         
-        // Safe standard fallback prompts if client-side device loses outer internet connection
         const fallbacks = [
             "Discuss the global economic shift toward alternative technologies and engineering.",
             "Analyze the impact of remote collaboration platforms on corporate office cultures.",
             "What measures should modern smart cities adopt to handle energy storage challenges?"
         ];
-        return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        const chosenFallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        currentRawPromptTopic = chosenFallback;
+        return chosenFallback;
     }
 
     // --- Recording Session Evaluation Architectures ---
@@ -809,7 +818,6 @@
         document.getElementById("analysis-card").style.display = "none";
         document.getElementById("start-btn").disabled = true;
         
-        // FIX: Fetch fresh global trending prompt right when button is clicked
         const dynamicTopic = await fetchLiveTrendingTopic();
         document.getElementById("topic").innerText = dynamicTopic;
 
@@ -843,7 +851,13 @@
                     }
                 }, 1000);
 
-                if (recognition) recognition.start();
+                if (recognition) {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.error("Failed to start speech engine context:", e);
+                    }
+                }
             }
         }, 1000);
     }
@@ -851,7 +865,13 @@
     function stopRecording() {
         isTrackingActive = false;
         clearInterval(visionInterval);
-        if (recognition) recognition.stop();
+        if (recognition) {
+            try {
+                recognition.stop();
+            } catch(e) {
+                console.log("Speech instance ended gracefully.");
+            }
+        }
         
         testCount++;
         localStorage.setItem('voiceAnalyzer_testCount', testCount); 
@@ -870,6 +890,64 @@
 
         triggerNotification("Processing structural telemetry results...", "success");
         analyzeSpeech();
+    }
+
+    // --- NEW: ADVANCED AI KEYWORD & SEMANTIC OVERLAP EVALUATOR ---
+    function calculateTopicRelevance(speechText, topicText) {
+        if (!speechText || !topicText) return 0;
+
+        const cleanAndTokenize = (text) => {
+            // High-frequency grammar stop words to strip away for semantic core calculations
+            const stopWords = new Set([
+                'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'arent', 'as', 'at',
+                'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', 'can', 'cant', 'cannot',
+                'could', 'couldnt', 'did', 'didnt', 'do', 'does', 'doesnt', 'doing', 'dont', 'down', 'during', 'each', 'few',
+                'for', 'from', 'further', 'had', 'hadnt', 'has', 'hasnt', 'have', 'havent', 'having', 'he', 'hed', 'hell',
+                'hes', 'her', 'here', 'heres', 'hers', 'herself', 'him', 'himself', 'his', 'how', 'hows', 'i', 'id', 'ill',
+                'im', 'ive', 'if', 'in', 'into', 'is', 'isnt', 'it', 'its', 'itself', 'lets', 'me', 'more', 'most', 'mustnt',
+                'my', 'myself', 'no', 'nor', 'not', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours',
+                'ourselves', 'out', 'over', 'own', 'same', 'shant', 'she', 'shed', 'shell', 'shes', 'should', 'shouldnt',
+                'so', 'some', 'such', 'than', 'that', 'thats', 'the', 'their', 'theirs', 'them', 'themselves', 'then',
+                'there', 'theres', 'these', 'they', 'theyd', 'theyll', 'theyre', 'theyve', 'this', 'those', 'through',
+                'to', 'too', 'under', 'until', 'up', 'very', 'was', 'wasnt', 'we', 'wed', 'well', 'were', 'weve', 'werent',
+                'what', 'whats', 'when', 'whens', 'where', 'wheres', 'which', 'while', 'who', 'whos', 'whom', 'why', 'whys',
+                'with', 'wont', 'would', 'wouldnt', 'you', 'youd', 'youll', 'youre', 'youve', 'your', 'yours', 'yourself', 'yourselves',
+                'discuss', 'analyze', 'share', 'thoughts', 'trending', 'global', 'headline'
+            ]);
+
+            return text.toLowerCase()
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "") // Clean out punctuation
+                .split(/\s+/)
+                .filter(word => word.length > 2 && !stopWords.has(word));
+        };
+
+        const topicTokens = cleanAndTokenize(topicText);
+        const speechTokens = cleanAndTokenize(speechText);
+
+        if (topicTokens.length === 0) return 100; // Edge case backup fallback
+        if (speechTokens.length === 0) return 0;
+
+        // Build frequency profile maps
+        const uniqueTopicWords = new Set(topicTokens);
+        let matchingMatches = 0;
+
+        uniqueTopicWords.forEach(word => {
+            // Look for matching roots or exact keywords inside spoken transcript
+            if (speechTokens.some(speechWord => speechWord.includes(word) || word.includes(speechWord))) {
+                matchingMatches++;
+            }
+        });
+
+        // Calculate primary overlap density ratio
+        let densityPercentage = (matchingMatches / uniqueTopicWords.size) * 100;
+
+        // Give extra weight adjustments based on contextual volume sizing
+        if (densityPercentage > 0) {
+            const contextualVolumeBonus = Math.min(25, speechTokens.length * 0.4); 
+            densityPercentage += contextualVolumeBonus;
+        }
+
+        return Math.min(100, Math.round(densityPercentage));
     }
 
     function analyzeSpeech() {
@@ -902,6 +980,9 @@
             dynamicEyeScore = Math.round((successfulEyeContacts / eyeContactChecks) * 100);
         }
 
+        // --- NEW: Calculate Live Topic Relevance Allocation ---
+        const relevanceScore = calculateTopicRelevance(text, currentRawPromptTopic);
+
         let overallScore = 100;
 
         if (words.length === 0) {
@@ -917,15 +998,30 @@
 
             const eyeScorePenalty = 100 - dynamicEyeScore;
             overallScore -= Math.floor(eyeScorePenalty * 0.4);
+
+            // --- NEW: Weight Relevance Score dynamically into performance dashboard ---
+            // Penalize up to 30 points off the overall score if talking about unrelated things
+            const relevancePenalty = Math.floor((100 - relevanceScore) * 0.3);
+            overallScore -= relevancePenalty;
         }
 
         overallScore = Math.max(0, Math.min(100, overallScore));
 
         document.getElementById("wpm-result").innerText = wpm;
         document.getElementById("filler-result").innerText = fillerCount;
-        
         document.getElementById("eye-contact-result").innerText = `${dynamicEyeScore}%`;
         document.getElementById("eye-contact-result").style.color = "#f7c948"; 
+        
+        // --- NEW: Render Relevance Output Metrics into DOM UI ---
+        const relevanceElement = document.getElementById("relevance-result");
+        relevanceElement.innerText = `${relevanceScore}%`;
+        if (relevanceScore >= 60) {
+            relevanceElement.style.color = "#4cd137"; // Green alignment matching
+        } else if (relevanceScore >= 35) {
+            relevanceElement.style.color = "#f7c948"; // Warning yellow deviation
+        } else {
+            relevanceElement.style.color = "#e94560"; // Unrelated content flag red
+        }
         
         document.getElementById("overall-score-result").innerText = `${overallScore} / 100`;
         
