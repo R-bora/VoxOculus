@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Voice & Vision Analyzer Pro</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
 <style>
     /* General Reset */
     html {
@@ -17,24 +21,26 @@
         padding-top: 80px;
     }
 
-    /* Fixed Navigation Bar */
+   /* Fixed Navigation Bar (Upgraded Glassmorphism) */
     .navbar {
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        background: #16213e;
+        top: 0; left: 0; right: 0;
+        background: rgba(22, 33, 62, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         padding: 15px 30px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         z-index: 1000;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
     .nav-brand {
-        font-size: 22px;
+        font-size: 20px;
         font-weight: bold;
         color: #f7c948;
+        white-space: nowrap;
     }
     .nav-links {
         display: flex;
@@ -70,6 +76,27 @@
         font-weight: bold;
     }
 
+    /* NEW: Hamburger Icon Styling */
+    .hamburger {
+        display: none;
+        flex-direction: column;
+        justify-content: space-between;
+        width: 28px;
+        height: 20px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        z-index: 1001;
+    }
+    .hamburger span {
+        width: 100%;
+        height: 3px;
+        background-color: #f7c948;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+    }
+
     /* Main Container & Layout Split */
     .container {
         max-width: 1000px;
@@ -80,7 +107,7 @@
     
     .workspace-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
         gap: 20px;
         margin-top: 20px;
     }
@@ -160,6 +187,11 @@
     }
     button:active {
         transform: scale(0.98);
+    }
+    button:disabled {
+        background: #555;
+        color: #888;
+        cursor: not-allowed;
     }
     #stop-btn {
         background: #e94560;
@@ -269,7 +301,7 @@
         background: #16213e;
         padding: 30px;
         border-radius: 12px;
-        width: 100%;
+        width: 90%;
         max-width: 400px;
         box-shadow: 0 10px 40px rgba(0,0,0,0.6);
         text-align: center;
@@ -353,13 +385,61 @@
     .toast-notification.error { border-left-color: #e94560; }
     .toast-notification.info { border-left-color: #38a1f3; }
 
+   /* RESPONSIVE DESIGN FIXES */
+    @media (max-width: 768px) {
+        .navbar { padding: 15px 20px; }
+        .hamburger { display: flex; }
+        
+        /* Mobile Dropdown Menu */
+        .nav-links {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(22, 33, 62, 0.95);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            flex-direction: column;
+            padding: 20px;
+            gap: 25px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            
+            /* Slide Animation */
+            clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+            transition: clip-path 0.4s ease-in-out;
+            visibility: hidden;
+        }
+        .nav-links.active {
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+            visibility: visible;
+        }
+        .nav-links a { font-size: 18px; }
+        .login-btn { width: 100%; }
+        
+        /* Hamburger 'X' Animation */
+        .hamburger.active span:nth-child(1) { transform: translateY(8.5px) rotate(45deg); }
+        .hamburger.active span:nth-child(2) { opacity: 0; }
+        .hamburger.active span:nth-child(3) { transform: translateY(-8.5px) rotate(-45deg); }
+
+        body { padding-top: 80px; }
+        .workspace-grid { grid-template-columns: 1fr; }
+        #countdown { font-size: 24px; }
+        .overall-score-value { font-size: 36px; }
+    }
 </style>
 </head>
 <body>
 
 <nav class="navbar">
-    <div class="nav-brand">🎙️ Voice & Vision Analyzer Pro</div>
-    <div class="nav-links">
+    <div class="nav-brand">🎙️ Voice & Vision Analyzer</div>
+    
+    <button class="hamburger" id="mobile-menu-btn" aria-label="Toggle navigation">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+    
+    <div class="nav-links" id="nav-links">
         <a href="#app">Test</a>
         <a href="#features">Features</a>
         <a href="#about">About</a>
@@ -367,7 +447,6 @@
         <button id="nav-login-btn" class="login-btn" onclick="openModal('loginModal')">Log In</button>
     </div>
 </nav>
-
 <div id="notification-zone" class="notification-container"></div>
 
 <div class="modal-overlay" id="loginModal">
@@ -427,7 +506,9 @@
 
         <div class="card">
             <h2>AI Vision Tracking</h2>
-            <p style="margin-bottom: 15px;">Keep direct eye contact with your camera monitor array to optimize your scoring statistics.</p>
+            <p style="margin-bottom: 15px; font-size: 14px; color: #8892b0;">
+                <em>Keep direct eye contact with your camera to optimize your ML engagement scores.</em>
+            </p>
             
             <div class="video-container">
                 <div class="live-status-pill" id="vision-status-pill">
@@ -466,7 +547,7 @@
 
 <div id="features" class="content-section">
     <h2 style="color: #f7c948;">System Features</h2>
-    <p>Voice Analyzer Pro comprehensively tracks your voice metrics alongside physical engagement indicators including real-time visual alignment vectors, pacing speeds, and verbal filler frequencies.</p>
+    <p>Voice Analyzer Pro comprehensively tracks your voice metrics alongside physical engagement indicators using advanced ML frameworks.</p>
 </div>
 
 <div id="about" class="content-section">
@@ -475,28 +556,50 @@
 </div>
 
 <script>
-    // System Variables
+    // --- System Variables ---
     let testCount = 0;
     const MAX_FREE_TESTS = 3;
     let isLoggedIn = false;
 
-    // Eye Tracking Evaluation Control Matrix
+    // FIX: Added the missing topics array that was causing the ReferenceError
+    const topics = [
+        "What inspired you to pursue your current career path?",
+        "Describe a time you overcame a significant challenge.",
+        "Where do you see yourself professionally in five years?",
+        "What is the most important skill for a leader to have?",
+        "Explain a complex topic you are familiar with to a beginner."
+    ];
+
+    // --- ML & Tracking Variables ---
     let isTrackingActive = false;
-    let eyeContactScoresArray = [];
-    let eyeTrackingAnimationFrame;
+    let isLookingAtCamera = false;
+    let eyeContactChecks = 0;
+    let successfulEyeContacts = 0;
+    let visionInterval;
     
     const webcamVideo = document.getElementById('webcam-view');
     const visualizerCanvas = document.getElementById('visualizer-canvas');
     const canvasContext = visualizerCanvas.getContext('2d');
 
-    const topics = [
-        "India's Digital Economy", "Artificial Intelligence in Education",
-        "Climate Change and India", "Space Exploration Missions",
-        "Cyber Security Challenges", "Women Empowerment in India",
-        "Social Media Impact on Youth", "Global Economic Challenges"
-    ];
+    // --- Mobile Menu Interaction ---
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const navLinks = document.getElementById('nav-links');
 
-    // Initialize Speech Recognition Core APIs
+    // Open/Close menu when clicking the hamburger
+    mobileMenuBtn.addEventListener('click', () => {
+        mobileMenuBtn.classList.toggle('active');
+        navLinks.classList.toggle('active');
+    });
+
+    // Auto-close menu when a link is clicked
+    document.querySelectorAll('.nav-links a, .login-btn').forEach(link => {
+        link.addEventListener('click', () => {
+            mobileMenuBtn.classList.remove('active');
+            navLinks.classList.remove('active');
+        });
+    });
+
+    // --- Initialize Speech Recognition Core APIs ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition;
     let recordingStartTime;
@@ -506,7 +609,7 @@
         recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.lang = 'en-IN';
+        recognition.lang = 'en-US';
 
         recognition.onresult = (e) => {
             let text = "";
@@ -515,11 +618,30 @@
             }
             document.getElementById("transcript").value = text;
         };
+
+        recognition.onerror = (event) => {
+            console.error("Speech recognition error:", event.error);
+            if (event.error === 'not-allowed') {
+                triggerNotification("Microphone blocked! Please allow mic access in your browser.", "error");
+            } else {
+                triggerNotification("Audio error: " + event.error, "error");
+            }
+        };
+
+        recognition.onend = () => {
+            if (isTrackingActive) {
+                try {
+                    recognition.start();
+                } catch (err) {
+                    console.log("Could not restart recognition automatically.");
+                }
+            }
+        };
     } else {
-        triggerNotification("Speech recognition is unavailable on this browser. Try Chrome.", "error");
+        triggerNotification("Speech recognition is unavailable on this browser. Try Google Chrome.", "error");
     }
 
-    // Modern Toast Notification Utility Method
+    // --- Modern Toast Notification Utility Method ---
     function triggerNotification(message, type = 'info') {
         const container = document.getElementById('notification-zone');
         const toast = document.createElement('div');
@@ -532,44 +654,60 @@
         toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
         container.appendChild(toast);
         
-        // Trigger presentation transitions smoothly
         setTimeout(() => toast.classList.add('show'), 50);
-        
-        // Tear down node element structures
         setTimeout(() => {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 400);
         }, 4000);
     }
 
-    // Auto-Activation Camera Initialization Workflow Hook
+    // --- NEW ML VISION SYSTEM (MediaPipe) ---
     window.addEventListener('DOMContentLoaded', () => {
         initializeVisionSystem();
     });
 
     function initializeVisionSystem() {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
-                .then(stream => {
-                    webcamVideo.srcObject = stream;
-                    document.getElementById('vision-status-pill').style.backgroundColor = 'rgba(76, 209, 55, 0.85)';
-                    document.getElementById('vision-status-text').innerText = "LIVE STREAM: ACTIVE";
-                    triggerNotification("Camera hardware connected successfully!", "success");
-                    
-                    // Match visualizer frame coordinates
-                    fitCanvasCoordinates();
-                    window.addEventListener('resize', fitCanvasCoordinates);
-                    
-                    // Kick off perpetual analysis pipeline rendering
-                    startVisualizerLoop();
-                })
-                .catch(err => {
-                    console.error("Camera connection error: ", err);
-                    document.getElementById('vision-status-text').innerText = "CAMERA BLOCKED";
-                    triggerNotification("Camera connection blocked. Please grant access permission.", "error");
-                });
+        document.getElementById('vision-status-text').innerText = "LOADING ML MODEL...";
+
+        const faceMesh = new FaceMesh({locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+        }});
+
+        faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+        faceMesh.onResults(onResults);
+
+        const camera = new Camera(webcamVideo, {
+            onFrame: async () => {
+                await faceMesh.send({image: webcamVideo});
+            },
+            width: 640, height: 480
+        });
+
+        camera.start().then(() => {
+            document.getElementById('vision-status-pill').style.backgroundColor = 'rgba(76, 209, 55, 0.85)';
+            document.getElementById('vision-status-text').innerText = "ML TRACKING ACTIVE";
+            triggerNotification("Camera & AI Model connected successfully!", "success");
+            fitCanvasCoordinates();
+            window.addEventListener('resize', fitCanvasCoordinates);
+        }).catch(err => {
+            triggerNotification("Camera blocked. Please grant access.", "error");
+        });
+    }
+
+    function onResults(results) {
+        fitCanvasCoordinates(); 
+        canvasContext.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
+
+        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+            isLookingAtCamera = true;
+            canvasContext.fillStyle = '#4cd137';
+            canvasContext.font = "bold 16px Arial";
+            canvasContext.fillText("✅ FACE DETECTED", 20, 30);
         } else {
-            triggerNotification("Your device does not support hardware video streaming interfaces.", "error");
+            isLookingAtCamera = false;
+            canvasContext.fillStyle = '#e94560';
+            canvasContext.font = "bold 16px Arial";
+            canvasContext.fillText("⚠️ USER LOST", 20, 30);
         }
     }
 
@@ -578,89 +716,7 @@
         visualizerCanvas.height = webcamVideo.offsetHeight;
     }
 
-    // AI Visualizer Simulation Processing Loop
-    function startVisualizerLoop() {
-        function drawFrame() {
-            canvasContext.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
-            
-            const w = visualizerCanvas.width;
-            const h = visualizerCanvas.height;
-            
-            if (w === 0 || h === 0) {
-                requestAnimationFrame(drawFrame);
-                return;
-            }
-
-            // Synthesize dynamic coordinates to emulate algorithmic facial bounding metrics
-            const timestamp = Date.now();
-            
-            // Simulating facial drifts over coordinates
-            const faceX = w / 2 + Math.sin(timestamp / 1500) * 15;
-            const faceY = h / 2 - 10 + Math.cos(timestamp / 2000) * 10;
-            const faceRadiusWidth = w * 0.22;
-            const faceRadiusHeight = h * 0.28;
-
-            // Compute localized simulation variance factors
-            let currentEngagementVariance = Math.sin(timestamp / 600) * Math.cos(timestamp / 1100);
-            let gazeStatus = true;
-            
-            // Periodically break gaze simulation arrays
-            if ((Math.floor(timestamp / 3000) % 4 === 0 && timestamp % 3000 > 1800)) {
-                gazeStatus = false;
-            }
-
-            if (isTrackingActive) {
-                // Record eye tracking consistency variables continuously
-                let localizedInstantScore = gazeStatus ? (92 + Math.floor(currentEngagementVariance * 6)) : (25 + Math.floor(Math.random() * 15));
-                eyeContactScoresArray.push(localizedInstantScore);
-            }
-
-            // Draw bounding boxes around simulated tracking areas
-            canvasContext.strokeStyle = gazeStatus ? '#4cd137' : '#e94560';
-            canvasContext.lineWidth = 2;
-            canvasContext.setLineDash([4, 4]);
-            
-            // Simulated Target Reticle Oval
-            canvasContext.beginPath();
-            canvasContext.ellipse(faceX, faceY, faceRadiusWidth, faceRadiusHeight, 0, 0, 2 * Math.PI);
-            canvasContext.stroke();
-
-            // Eye Center Anchors Calculations
-            const leftEyeX = faceX - (faceRadiusWidth * 0.4);
-            const rightEyeX = faceX + (faceRadiusWidth * 0.4);
-            const eyesY = faceY - (faceRadiusHeight * 0.15);
-
-            // Render tracking boxes over crosshairs
-            canvasContext.fillStyle = gazeStatus ? 'rgba(76, 209, 55, 0.15)' : 'rgba(233, 69, 96, 0.15)';
-            canvasContext.strokeStyle = gazeStatus ? '#f7c948' : '#e94560';
-            canvasContext.setLineDash([]);
-            canvasContext.lineWidth = 1.5;
-
-            [leftEyeX, rightEyeX].forEach((eyeCenter) => {
-                const boxSize = 24;
-                canvasContext.fillRect(eyeCenter - boxSize/2, eyesY - boxSize/2, boxSize, boxSize);
-                canvasContext.strokeRect(eyeCenter - boxSize/2, eyesY - boxSize/2, boxSize, boxSize);
-                
-                // Add inner reticle pupil points
-                canvasContext.fillStyle = gazeStatus ? '#4cd137' : '#e94560';
-                canvasContext.beginPath();
-                canvasContext.arc(eyeCenter + (gazeStatus ? currentEngagementVariance * 2 : -5), eyesY, 3, 0, 2 * Math.PI);
-                canvasContext.fill();
-            });
-
-            // Display UI diagnostics feedback on the feed overlay
-            canvasContext.fillStyle = 'white';
-            canvasContext.font = '11px Arial';
-            canvasContext.fillText(`TRACKING: FACIAL VECTOR MATCHED`, faceX - 80, faceY + faceRadiusHeight + 18);
-            canvasContext.fillStyle = gazeStatus ? '#4cd137' : '#e94560';
-            canvasContext.fillText(`GAZE ALIGNMENT: ${gazeStatus ? 'LOCK' : 'LOST'}`, faceX - 65, faceY + faceRadiusHeight + 32);
-
-            requestAnimationFrame(drawFrame);
-        }
-        requestAnimationFrame(drawFrame);
-    }
-
-    // Modal Presentation Architectures
+    // --- Modal Presentation Architectures ---
     function openModal(modalId) {
         document.getElementById(modalId).style.display = 'flex';
     }
@@ -677,7 +733,6 @@
         openModal('loginModal');
     }
 
-    // Authorization Matrix Implementations
     function processLogin() {
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
@@ -710,7 +765,7 @@
         document.getElementById("start-btn").disabled = false;
     }
 
-    // Recording Session Evaluation Architectures
+    // --- Recording Session Evaluation Architectures ---
     function startTest() {
         if (testCount >= MAX_FREE_TESTS && !isLoggedIn) {
             openModal('limitModal');
@@ -744,11 +799,18 @@
                 triggerNotification("Recorders initialized. Speak now!", "info");
 
                 recordingStartTime = Date.now();
-                
-                // Clear and engage analytics parameters tracking arrays
-                eyeContactScoresArray = [];
                 isTrackingActive = true;
                 
+                // ML Tracker Interval
+                eyeContactChecks = 0;
+                successfulEyeContacts = 0;
+                visionInterval = setInterval(() => {
+                    if (isTrackingActive) {
+                        eyeContactChecks++;
+                        if (isLookingAtCamera) successfulEyeContacts++;
+                    }
+                }, 1000);
+
                 if (recognition) recognition.start();
             }
         }, 1000);
@@ -756,6 +818,7 @@
 
     function stopRecording() {
         isTrackingActive = false;
+        clearInterval(visionInterval);
         if (recognition) recognition.stop();
         
         testCount++;
@@ -777,20 +840,19 @@
 
     function analyzeSpeech() {
         const text = document.getElementById("transcript").value.trim();
-        if (!text) {
-            triggerNotification("Speech payload calculation failed. Text stream missing.", "error");
-            return alert("No speech detected. Please try again.");
+        
+        const endTime = Date.now();
+        const durationSeconds = (endTime - recordingStartTime) / 1000; 
+        const safeDurationSec = durationSeconds > 1 ? durationSeconds : 1; 
+        
+        // 1. Calculate WPM
+        const words = text.split(/\s+/).filter(word => word.length > 0);
+        let wpm = 0;
+        if (words.length > 0) {
+            wpm = Math.round((words.length / safeDurationSec) * 60);
         }
 
-        const endTime = Date.now();
-        const durationMinutes = (endTime - recordingStartTime) / 60000;
-        
-        // 1. Calculate Words Per Minute
-        const words = text.split(/\s+/).filter(word => word.length > 0);
-        const safeDuration = durationMinutes > 0 ? durationMinutes : 0.01;
-        const wpm = Math.round(words.length / safeDuration);
-
-        // 2. Filler Word Detection Engine
+        // 2. Filler Word Detection
         const textLower = text.toLowerCase();
         const fillerList = ['like', 'basically', 'actually', 'so', 'literally', 'ah', 'uh', 'um'];
         let fillerCount = 0;
@@ -803,36 +865,39 @@
             }
         });
 
-        // 3. Compute Complex Eye Contact Consistency Values
-        let dynamicEyeScore = 85; 
-        if (eyeContactScoresArray.length > 0) {
-            const sum = eyeContactScoresArray.reduce((total, next) => total + next, 0);
-            dynamicEyeScore = Math.round(sum / eyeContactScoresArray.length);
+        // 3. Compute Real ML Eye Contact Scores
+        let dynamicEyeScore = 0;
+        if (eyeContactChecks > 0) {
+            dynamicEyeScore = Math.round((successfulEyeContacts / eyeContactChecks) * 100);
         }
-        dynamicEyeScore = Math.max(10, Math.min(100, dynamicEyeScore));
 
-        // 4. Calculate Combined Metric Scores Vector
+        // 4. Overall Score Calculation
         let overallScore = 100;
-        
-        // Deduct values incrementally based on diagnostic indicators
-        overallScore -= (fillerCount * 3);
-        
-        if (wpm < 110) {
-            overallScore -= Math.floor((110 - wpm) * 0.5);
-        } else if (wpm > 170) {
-            overallScore -= Math.floor((wpm - 170) * 0.5);
-        }
 
-        // Incorporate tracking weights directly into full configuration metric parameters
-        const eyeScorePenalty = 100 - dynamicEyeScore;
-        overallScore -= Math.floor(eyeScorePenalty * 0.4);
+        if (words.length === 0) {
+            overallScore = 0;
+        } else {
+            overallScore -= (fillerCount * 3);
+            
+            if (wpm < 110) {
+                overallScore -= Math.floor((110 - wpm) * 0.5);
+            } else if (wpm > 170) {
+                overallScore -= Math.floor((wpm - 170) * 0.5);
+            }
+
+            const eyeScorePenalty = 100 - dynamicEyeScore;
+            overallScore -= Math.floor(eyeScorePenalty * 0.4);
+        }
 
         overallScore = Math.max(0, Math.min(100, overallScore));
 
-        // Present analytical statistics back elements
+        // Display Data
         document.getElementById("wpm-result").innerText = wpm;
         document.getElementById("filler-result").innerText = fillerCount;
+        
         document.getElementById("eye-contact-result").innerText = `${dynamicEyeScore}%`;
+        document.getElementById("eye-contact-result").style.color = "#f7c948"; 
+        
         document.getElementById("overall-score-result").innerText = `${overallScore} / 100`;
         
         document.getElementById("analysis-card").style.display = "block";
