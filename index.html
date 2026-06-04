@@ -497,16 +497,7 @@
       measurementId: "G-SV7ECKCKLC"
     };
     
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
-
-    const topics = [
-        "What inspired you to pursue your current career path?",
-        "Describe a time you overcame a significant challenge.",
-        "Where do you see yourself professionally in five years?",
-        "What is the most important skill for a leader to have?",
-        "Explain a complex topic you are familiar with to a beginner."
-    ];
 
     // --- ML & Tracking Variables ---
     let isTrackingActive = false;
@@ -612,13 +603,11 @@
     // --- ML VISION SYSTEM (MediaPipe Eye Tracking) ---
     window.addEventListener('DOMContentLoaded', () => {
         const savedUserName = localStorage.getItem('voiceAnalyzer_userName');
-
         if (isLoggedIn) {
             completeLogin(true, savedUserName);
         } else {
             document.getElementById("test-counter-display").innerText = `Tests taken: ${testCount} / ${MAX_FREE_TESTS} (Free)`;
         }
-        
         initializeVisionSystem();
     });
 
@@ -688,7 +677,6 @@
             canvasContext.beginPath();
             canvasContext.arc(nose.x * visualizerCanvas.width, nose.y * visualizerCanvas.height, 4, 0, 2 * Math.PI);
             canvasContext.fill();
-
         } else {
             isLookingAtCamera = false;
             canvasContext.fillStyle = '#e94560'; 
@@ -730,10 +718,8 @@
         }
     }
 
-    // --- REAL GOOGLE LOGIN TRIGGER ---
     function googleLogin() {
         const provider = new firebase.auth.GoogleAuthProvider();
-        
         firebase.auth().signInWithPopup(provider)
             .then((result) => {
                 const user = result.user; 
@@ -754,7 +740,6 @@
         localStorage.setItem('voiceAnalyzer_userName', userName); 
         
         closeModal('loginModal');
-        
         document.getElementById('nav-login-btn').style.display = 'none';
         
         const greetingElement = document.getElementById('user-greeting');
@@ -763,7 +748,6 @@
 
         document.getElementById('test-counter-display').innerText = "Unlimited Tests Unlocked! 🚀";
         document.getElementById('test-counter-display').style.color = "#4cd137";
-        
         document.getElementById("start-btn").disabled = false;
 
         if (!isSilentLoad && typeof triggerNotification === 'function') {
@@ -771,8 +755,48 @@
         }
     }
 
+    // --- NEW: DYNAMIC GOOGLE TRENDS / NEWS TOPIC GENERATOR ---
+    async function fetchLiveTrendingTopic() {
+        document.getElementById("topic").innerText = "Generating live trending topic...";
+        
+        // Using a CORS proxy to pull live, real-time main news items from a safe global headlines feed
+        const targetRss = "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVd3U00xOWhNutIBR2dCR2V3b0FQAQ?hl=en-US&gl=US&ceid=US:en";
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetRss)}`;
+
+        try {
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error("Network error fetching live feed.");
+            
+            const data = await response.json();
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(data.contents, "text/xml");
+            const items = xmlDoc.getElementsByTagName("item");
+            
+            if (items.length > 0) {
+                // Select a random highly-discussed item out of the top live headings
+                const randomIndex = Math.floor(Math.random() * Math.min(items.length, 15));
+                let rawHeadline = items[randomIndex].getElementsByTagName("title")[0].textContent;
+                
+                // Clean up any trailing news source labels (e.g., "- Reuters")
+                let cleanedTopic = rawHeadline.split(" - ")[0];
+                
+                return `Analyze and share your thoughts on this trending global headline: "${cleanedTopic}"`;
+            }
+        } catch (err) {
+            console.error("CORS Feed fallback active:", err);
+        }
+        
+        // Safe standard fallback prompts if client-side device loses outer internet connection
+        const fallbacks = [
+            "Discuss the global economic shift toward alternative technologies and engineering.",
+            "Analyze the impact of remote collaboration platforms on corporate office cultures.",
+            "What measures should modern smart cities adopt to handle energy storage challenges?"
+        ];
+        return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    }
+
     // --- Recording Session Evaluation Architectures ---
-    function startTest() {
+    async function startTest() {
         if (testCount >= MAX_FREE_TESTS && !isLoggedIn) {
             openModal('limitModal');
             triggerNotification("Free tier threshold reached.", "info");
@@ -782,16 +806,16 @@
         lockedTranscript = "";
         currentSessionTranscript = "";
         document.getElementById("transcript").value = "";
-        
         document.getElementById("analysis-card").style.display = "none";
         document.getElementById("start-btn").disabled = true;
         
-        const topic = topics[Math.floor(Math.random() * topics.length)];
-        document.getElementById("topic").innerText = "Topic: " + topic;
+        // FIX: Fetch fresh global trending prompt right when button is clicked
+        const dynamicTopic = await fetchLiveTrendingTopic();
+        document.getElementById("topic").innerText = dynamicTopic;
 
         let time = 10;
         document.getElementById("countdown").innerText = `Starting in ${time}s...`;
-        triggerNotification("Topic chosen. Prepare for entry alignment.", "info");
+        triggerNotification("Live topic calculated. Prepare your speech alignment.", "info");
 
         recordingTimer = setInterval(() => {
             time--;
