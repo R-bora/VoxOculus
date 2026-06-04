@@ -429,7 +429,7 @@
         min-width: 280px;
         max-width: 400px;
         transform: translateX(120%);
-        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2);
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2), opacity 0.3s;
         opacity: 0;
     }
     .toast-notification.show { transform: translateX(0); opacity: 1; }
@@ -640,15 +640,19 @@
     let recordingTimer;
     
     let lockedTranscript = ""; 
+    let currentSessionTranscript = "";
 
-    // Helper function to handle ghost variations on continuous restarts
+    // NEW MOBILE FIX: Safely checks if the mobile browser is repeating a sentence chunk
     function isDuplicatePhrase(newPhrase, existingText) {
         let cleanNew = newPhrase.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
         let cleanExisting = existingText.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
         
         if (!cleanNew || !cleanExisting) return false;
+        
+        // Direct exact overlap check
         if (cleanExisting.endsWith(cleanNew)) return true;
         
+        // Sliding window lookback check to catch minor variations in mobile stream restarts
         let trailingContext = cleanExisting.slice(-Math.max(40, cleanNew.length + 15));
         if (trailingContext.includes(cleanNew)) return true;
 
@@ -659,34 +663,34 @@
         recognition = new SpeechRecognition();
         
         recognition.continuous = true; 
-        // FIX: Setting interimResults to true enables words to display immediately while speaking
-        recognition.interimResults = true; 
+        recognition.interimResults = false;
         recognition.lang = 'en-US';
 
         recognition.onresult = (event) => {
-            let interimTranscript = "";
-            let newFinalizedChunks = "";
+            let interim = "";
+            let final = "";
             
             for (let i = event.resultIndex; i < event.results.length; ++i) {
-                let textBlock = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
-                    textBlock = textBlock.trim();
-                    if (!isDuplicatePhrase(textBlock, lockedTranscript)) {
-                        newFinalizedChunks += textBlock + " ";
+                    let textBlock = event.results[i][0].transcript.trim();
+                    
+                    // Filter out mobile duplicate ghosts using the helper function above
+                    let fullCurrentText = lockedTranscript + " " + currentSessionTranscript;
+                    if (!isDuplicatePhrase(textBlock, fullCurrentText)) {
+                        final += textBlock + " ";
                     } else {
                         console.log("🔥 AI blocked a ghost sentence repeat: ", textBlock);
                     }
                 } else {
-                    interimTranscript += textBlock;
+                    interim += event.results[i][0].transcript;
                 }
             }
             
-            if (newFinalizedChunks !== "") {
-                lockedTranscript = (lockedTranscript + " " + newFinalizedChunks).trim() + " ";
+            if (final.trim() !== "") {
+                currentSessionTranscript += final;
             }
             
-            // Instantly render both processing/interim segments and locked history segments together
-            document.getElementById("transcript").value = (lockedTranscript + interimTranscript).trim();
+            document.getElementById("transcript").value = (lockedTranscript + currentSessionTranscript + interim).trim();
         };
 
         recognition.onerror = (event) => {
@@ -694,9 +698,19 @@
             if (event.error === 'not-allowed') {
                 triggerNotification("Microphone blocked! Please allow mic access in your browser.", "error");
             } 
+            if (event.error === 'aborted' && isTrackingActive) {
+                console.log("Speech context aborted. Attempting recovery...");
+            }
         };
 
         recognition.onend = () => {
+            if (currentSessionTranscript.trim() !== "") {
+                if (!isDuplicatePhrase(currentSessionTranscript, lockedTranscript)) {
+                    lockedTranscript = (lockedTranscript + " " + currentSessionTranscript).trim() + " ";
+                }
+            }
+            currentSessionTranscript = ""; 
+            
             if (isTrackingActive) {
                 setTimeout(() => {
                     try {
@@ -803,6 +817,7 @@
                 canvasContext.fillText("⚠️ LOOKING AWAY", 20, 30);
             }
 
+            // Glow tracking circle animation onto canvas layout framework
             canvasContext.fillStyle = isLookingForward ? '#4cd137' : '#e94560';
             canvasContext.shadowBlur = 10;
             canvasContext.shadowColor = isLookingForward ? '#4cd137' : '#e94560';
@@ -940,6 +955,7 @@
         }
 
         lockedTranscript = "";
+        currentSessionTranscript = "";
         document.getElementById("transcript").value = "";
         document.getElementById("analysis-card").style.display = "none";
         document.getElementById("start-btn").disabled = true;
@@ -1153,5 +1169,3 @@
         triggerNotification("Performance scoreboard generation successful!", "success");
     }
 </script>
-</body>
-</html>
