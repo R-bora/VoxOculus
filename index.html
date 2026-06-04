@@ -557,10 +557,8 @@
 
 <script>
     // --- System Variables ---
-    // Pull from localStorage, or default to 0 if it's their first time
     let testCount = parseInt(localStorage.getItem('voiceAnalyzer_testCount')) || 0;
     const MAX_FREE_TESTS = 3;
-    // Remember if they logged in previously
     let isLoggedIn = localStorage.getItem('voiceAnalyzer_isLoggedIn') === 'true'; 
 
     const topics = [
@@ -603,53 +601,57 @@
     let recognition;
     let recordingStartTime;
     let recordingTimer;
-    let finalTranscript = ""; 
+    
+    // TWO-VARIABLE LOCK SYSTEM (Fixes Mobile Duplication Bug)
+    let lockedTranscript = ""; 
+    let currentSessionTranscript = "";
 
-    // Detect Mobile Device to apply the Android Bugfix
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
         
-        // CRITICAL FIX: Turn off continuous on mobile to prevent the buffer duplication bug
+        // Turn off continuous on mobile to force clean session breaks
         recognition.continuous = !isMobile; 
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
-        let lastFinalizedText = ""; // Failsafe for Android double-firing
-
-        recognition.onresult = (e) => {
-            let interimTranscript = "";
+        recognition.onresult = (event) => {
+            let interim = "";
+            let final = "";
             
-            for (let i = e.resultIndex; i < e.results.length; i++) {
-                if (e.results[i].isFinal) {
-                    let newText = e.results[i][0].transcript.trim();
-                    
-                    // Prevent direct back-to-back exact phrase duplicates
-                    if (newText !== lastFinalizedText && newText !== "") {
-                        finalTranscript += newText + " ";
-                        lastFinalizedText = newText;
-                    }
+            // Rebuild the current session's text from scratch every single time.
+            // This prevents the browser from blindly duplicating old text on mobile.
+            for (let i = 0; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    final += event.results[i][0].transcript;
                 } else {
-                    interimTranscript += e.results[i][0].transcript;
+                    interim += event.results[i][0].transcript;
                 }
             }
             
-            document.getElementById("transcript").value = finalTranscript + interimTranscript;
+            // Lock in the newly corrected, parsed string for this exact session
+            currentSessionTranscript = final;
+            
+            // Render: (Past locked sessions) + (Current session confirmed) + (Current guessing)
+            document.getElementById("transcript").value = lockedTranscript + currentSessionTranscript + interim;
         };
 
         recognition.onerror = (event) => {
             console.error("Speech recognition error:", event.error);
-            // Ignore 'no-speech' errors as they happen naturally when looping the mic on mobile
             if (event.error === 'not-allowed') {
                 triggerNotification("Microphone blocked! Please allow mic access in your browser.", "error");
-            } else if (event.error !== 'no-speech') {
-                // triggerNotification("Audio error: " + event.error, "error");
-            }
+            } 
         };
 
         recognition.onend = () => {
-            // On mobile, the mic stops when the user pauses. We instantly restart it here.
+            // Session over. Move whatever we got into the permanent locked memory.
+            if (currentSessionTranscript.trim() !== "") {
+                lockedTranscript += currentSessionTranscript + " ";
+            }
+            currentSessionTranscript = ""; // Reset for the next mobile burst session
+            
+            // Seamlessly restart the mic to act like continuous mode on mobile
             if (isTrackingActive) {
                 try {
                     recognition.start();
@@ -684,9 +686,8 @@
 
     // --- NEW ML VISION SYSTEM (MediaPipe) ---
     window.addEventListener('DOMContentLoaded', () => {
-        // --- Sync UI with Local Storage Memory on Load ---
         if (isLoggedIn) {
-            completeLogin(true); // True means "silent login" on refresh
+            completeLogin(true);
         } else {
             document.getElementById("test-counter-display").innerText = `Tests taken: ${testCount} / ${MAX_FREE_TESTS} (Free)`;
         }
@@ -783,7 +784,6 @@
 
     function completeLogin(isSilentLoad = false) {
         isLoggedIn = true;
-        // Save login state to browser memory
         localStorage.setItem('voiceAnalyzer_isLoggedIn', 'true'); 
         
         closeModal('loginModal');
@@ -795,7 +795,6 @@
         
         document.getElementById("start-btn").disabled = false;
 
-        // Only trigger the toast notification if it's a manual login, not a page refresh
         if (!isSilentLoad && typeof triggerNotification === 'function') {
              triggerNotification("Logged in seamlessly.", "success");
         }
@@ -809,8 +808,11 @@
             return;
         }
 
-        finalTranscript = "";
+        // RESET THE TRANSCRIPT VAULTS FOR THE NEW TEST
+        lockedTranscript = "";
+        currentSessionTranscript = "";
         document.getElementById("transcript").value = "";
+        
         document.getElementById("analysis-card").style.display = "none";
         document.getElementById("start-btn").disabled = true;
         
@@ -859,7 +861,6 @@
         if (recognition) recognition.stop();
         
         testCount++;
-        // Save the new count to the browser's persistent memory
         localStorage.setItem('voiceAnalyzer_testCount', testCount); 
         
         if(!isLoggedIn) {
@@ -885,14 +886,12 @@
         const durationSeconds = (endTime - recordingStartTime) / 1000; 
         const safeDurationSec = durationSeconds > 1 ? durationSeconds : 1; 
         
-        // 1. Calculate WPM
         const words = text.split(/\s+/).filter(word => word.length > 0);
         let wpm = 0;
         if (words.length > 0) {
             wpm = Math.round((words.length / safeDurationSec) * 60);
         }
 
-        // 2. Filler Word Detection
         const textLower = text.toLowerCase();
         const fillerList = ['like', 'basically', 'actually', 'so', 'literally', 'ah', 'uh', 'um'];
         let fillerCount = 0;
@@ -905,13 +904,11 @@
             }
         });
 
-        // 3. Compute Real ML Eye Contact Scores
         let dynamicEyeScore = 0;
         if (eyeContactChecks > 0) {
             dynamicEyeScore = Math.round((successfulEyeContacts / eyeContactChecks) * 100);
         }
 
-        // 4. Overall Score Calculation
         let overallScore = 100;
 
         if (words.length === 0) {
@@ -931,7 +928,6 @@
 
         overallScore = Math.max(0, Math.min(100, overallScore));
 
-        // Display Data
         document.getElementById("wpm-result").innerText = wpm;
         document.getElementById("filler-result").innerText = fillerCount;
         
