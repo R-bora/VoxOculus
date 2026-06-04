@@ -9,17 +9,18 @@
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 
 <style>
-    /* General Reset */
+    /* General Reset & Animated Background Gradient */
     html { scroll-behavior: smooth; }
     body {
         font-family: Arial, sans-serif;
-        background: #0b1020;
+        background: linear-gradient(135deg, #0b1020 0%, #111a36 100%);
         color: white;
         margin: 0;
         padding-top: 80px;
+        overflow-x: hidden;
     }
 
-   /* Fixed Navigation Bar */
+   /* Fixed Navigation Bar with Soft Blur */
     .navbar {
         position: fixed;
         top: 0; left: 0; right: 0;
@@ -39,6 +40,10 @@
         font-weight: bold;
         color: #f7c948;
         white-space: nowrap;
+        transition: transform 0.3s ease;
+    }
+    .nav-brand:hover {
+        transform: scale(1.03);
     }
     .nav-links {
         display: flex;
@@ -49,9 +54,27 @@
         color: white;
         text-decoration: none;
         font-size: 16px;
-        transition: color 0.2s;
+        position: relative;
+        transition: color 0.3s;
     }
     .nav-links a:hover { color: #f7c948; }
+    /* Animated Hover Underline Link Effect */
+    .nav-links a::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        transform: scaleX(0);
+        height: 2px;
+        bottom: -4px;
+        left: 0;
+        background-color: #f7c948;
+        transform-origin: bottom right;
+        transition: transform 0.25s ease-out;
+    }
+    .nav-links a:hover::after {
+        transform: scaleX(1);
+        transform-origin: bottom left;
+    }
     .login-btn {
         background: transparent;
         border: 2px solid #f7c948;
@@ -60,16 +83,18 @@
         border-radius: 8px;
         font-weight: bold;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
     }
     .login-btn:hover {
         background: #f7c948;
         color: #16213e;
+        box-shadow: 0 0 15px rgba(247, 201, 72, 0.4);
     }
     .user-greeting {
         display: none;
         color: #4cd137;
         font-weight: bold;
+        animation: fadeIn 0.5s ease forwards;
     }
 
     /* Hamburger Icon Styling */
@@ -93,7 +118,7 @@
         transition: all 0.3s ease;
     }
 
-    /* Main Container & Layout Split */
+    /* Main Container */
     .container {
         max-width: 1000px;
         margin: auto;
@@ -108,15 +133,21 @@
         margin-top: 20px;
     }
 
+    /* Cards with Hover Shadow Animation */
     .card {
         background: #16213e;
         padding: 25px;
         border-radius: 16px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         height: fit-content;
+        transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
+    }
+    .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.35);
     }
     
-    /* Video & Visualizer Styles */
+    /* Video Area with Scanning Laser Visual Mesh Lines Effect */
     .video-container {
         position: relative;
         width: 100%;
@@ -124,6 +155,17 @@
         overflow: hidden;
         background: #000;
         aspect-ratio: 4 / 3;
+    }
+    /* Animated overlay laser scan bar */
+    .video-container::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(to right, transparent, rgba(247, 201, 72, 0.6), transparent);
+        animation: scanline 4s linear infinite;
+        pointer-events: none;
+        z-index: 4;
     }
     #webcam-view {
         width: 100%;
@@ -154,6 +196,7 @@
         display: flex;
         align-items: center;
         gap: 6px;
+        transition: background-color 0.4s ease;
     }
     .live-status-pill .pulse-dot {
         width: 8px;
@@ -163,13 +206,27 @@
         animation: pulse 1.5s infinite;
     }
 
+    /* Core Dynamic Keyframe Animation Architectures */
     @keyframes pulse {
-        0% { opacity: 0.3; }
-        50% { opacity: 1; }
-        100% { opacity: 0.3; }
+        0% { transform: scale(0.8); opacity: 0.3; }
+        50% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(0.8); opacity: 0.3; }
+    }
+    @keyframes scanline {
+        0% { top: 0%; }
+        50% { top: 100%; }
+        100% { top: 0%; }
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
     }
 
-    /* Buttons */
+    /* Buttons with Spring Feedback Transitions */
     button {
         background: #f7c948;
         border: none;
@@ -179,16 +236,22 @@
         font-size: 16px;
         cursor: pointer;
         color: #16213e;
-        transition: transform 0.1s;
+        transition: transform 0.1s ease, background-color 0.3s ease, box-shadow 0.3s;
     }
-    button:active { transform: scale(0.98); }
+    button:hover:not(:disabled) {
+        box-shadow: 0 5px 15px rgba(247, 201, 72, 0.3);
+    }
+    button:active { transform: scale(0.95); }
     button:disabled { background: #555; color: #888; cursor: not-allowed; }
     #stop-btn { background: #e94560; color: white; display: none; }
-    .test-counter { font-size: 14px; color: #8892b0; margin-top: 10px; }
+    #stop-btn:hover { box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4); }
+    .test-counter { font-size: 14px; color: #8892b0; margin-top: 10px; transition: color 0.3s; }
 
     /* Typography & Inputs */
     #topic { font-size: 22px; color: #f7c948; margin: 20px 0 10px 0; line-height: 1.4; }
-    #countdown { font-size: 32px; font-weight: bold; margin-bottom: 15px; }
+    #countdown { font-size: 32px; font-weight: bold; margin-bottom: 15px; transition: color 0.3s ease; }
+    
+    /* Input Textareas with Fluid Glow Accent Frames */
     textarea {
         width: 100%;
         height: 120px;
@@ -201,10 +264,20 @@
         font-size: 16px;
         box-sizing: border-box;
         resize: vertical;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    textarea:focus {
+        outline: none;
+        border-color: #f7c948;
+        box-shadow: 0 0 10px rgba(247, 201, 72, 0.15);
     }
 
-    /* Analysis Section */
-    #analysis-card { display: none; margin-top: 20px; }
+    /* Analysis Dashboard Panel with Entry Fading Animation */
+    #analysis-card { 
+        display: none; 
+        margin-top: 20px; 
+        animation: fadeIn 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+    }
     .analysis-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -217,9 +290,15 @@
         padding: 20px;
         border-radius: 12px;
         text-align: center;
+        transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+    .stat-box:hover {
+        transform: scale(1.02);
+        border-color: #4a6296;
     }
     .stat-title { font-size: 14px; color: #8892b0; text-transform: uppercase; letter-spacing: 1px; }
-    .stat-value { font-size: 32px; font-weight: bold; color: #f7c948; margin-top: 10px; }
+    .stat-value { font-size: 32px; font-weight: bold; color: #f7c948; margin-top: 10px; transition: color 0.3s; }
+    
     .overall-score-container {
         margin-top: 25px;
         padding: 25px;
@@ -227,9 +306,19 @@
         border-radius: 12px;
         text-align: center;
         color: #16213e;
+        position: relative;
+        overflow: hidden;
     }
-    .overall-score-title { font-size: 18px; font-weight: bold; text-transform: uppercase; }
-    .overall-score-value { font-size: 48px; font-weight: bold; margin-top: 5px; }
+    /* Ambient Shimmer Light Wave Effect running background over performance card */
+    .overall-score-container::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; width: 200%; height: 100%;
+        background: linear-gradient(to right, transparent, rgba(255,255,255,0.25), transparent);
+        animation: shimmer 3.5s infinite linear;
+    }
+    .overall-score-title { font-size: 18px; font-weight: bold; text-transform: uppercase; z-index: 2; position: relative; }
+    .overall-score-value { font-size: 48px; font-weight: bold; margin-top: 5px; z-index: 2; position: relative; }
 
     /* Content Sections */
     .content-section {
@@ -239,7 +328,7 @@
         border-top: 1px solid #2a3b5c;
     }
 
-    /* Modals */
+    /* Modals with Overlay Darkening Transforms */
     .modal-overlay {
         display: none;
         position: fixed;
@@ -249,6 +338,11 @@
         justify-content: center;
         align-items: center;
         backdrop-filter: blur(4px);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .modal-overlay.open {
+        opacity: 1;
     }
     .modal-box {
         background: #16213e;
@@ -258,6 +352,11 @@
         max-width: 400px;
         box-shadow: 0 10px 40px rgba(0,0,0,0.6);
         text-align: center;
+        transform: scale(0.85);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .modal-overlay.open .modal-box {
+        transform: scale(1);
     }
     .modal-box h2 { margin-top: 0; color: #f7c948; }
     .modal-box p { color: #d1d5db; line-height: 1.5; }
@@ -270,7 +369,9 @@
         background: #0b1020;
         color: white;
         box-sizing: border-box;
+        transition: border-color 0.3s;
     }
+    .modal-box input:focus { outline: none; border-color: #f7c948; }
     .modal-box button { width: 100%; margin-top: 10px; }
     
     .google-btn {
@@ -301,9 +402,10 @@
         border-radius: 4px;
         display: none;
         margin-bottom: 10px;
+        animation: fadeIn 0.3s ease;
     }
 
-    /* Toast Notification System */
+    /* Toast Notification Floating Queue Stack System */
     .notification-container {
         position: fixed;
         bottom: 25px;
@@ -327,7 +429,7 @@
         min-width: 280px;
         max-width: 400px;
         transform: translateX(120%);
-        transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2), opacity 0.3s;
         opacity: 0;
     }
     .toast-notification.show { transform: translateX(0); opacity: 1; }
@@ -489,7 +591,7 @@
     let testCount = parseInt(localStorage.getItem('voiceAnalyzer_testCount')) || 0;
     const MAX_FREE_TESTS = 3;
     let isLoggedIn = localStorage.getItem('voiceAnalyzer_isLoggedIn') === 'true'; 
-    let currentRawPromptTopic = ""; // Tracks active context for semantic testing
+    let currentRawPromptTopic = "";
 
     // --- FIREBASE CONFIGURATION ---
     const firebaseConfig = {
@@ -591,7 +693,6 @@
         triggerNotification("Speech recognition is unavailable on this browser. Try Google Chrome.", "error");
     }
 
-    // --- Modern Toast Notification Utility Method ---
     function triggerNotification(message, type = 'info') {
         const container = document.getElementById('notification-zone');
         const toast = document.createElement('div');
@@ -684,10 +785,15 @@
                 canvasContext.fillText("⚠️ LOOKING AWAY", 20, 30);
             }
 
+            // Animated glowing telemetry node circle on face mesh nose coordinate
             canvasContext.fillStyle = isLookingForward ? '#4cd137' : '#e94560';
+            canvasContext.shadowBlur = 10;
+            canvasContext.shadowColor = isLookingForward ? '#4cd137' : '#e94560';
             canvasContext.beginPath();
-            canvasContext.arc(nose.x * visualizerCanvas.width, nose.y * visualizerCanvas.height, 4, 0, 2 * Math.PI);
+            canvasContext.arc(nose.x * visualizerCanvas.width, nose.y * visualizerCanvas.height, 5, 0, 2 * Math.PI);
             canvasContext.fill();
+            // Reset shadows for upcoming loop draws
+            canvasContext.shadowBlur = 0;
         } else {
             isLookingAtCamera = false;
             canvasContext.fillStyle = '#e94560'; 
@@ -701,17 +807,25 @@
         visualizerCanvas.height = webcamVideo.offsetHeight;
     }
 
-    // --- Modal Presentation Architectures ---
-    function openModal(modalId) { document.getElementById(modalId).style.display = 'flex'; }
+    // --- Modal Slide/Scale Presentation Architectures ---
+    function openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('open'), 10);
+    }
     
     function closeModal(modalId) {
-        document.getElementById(modalId).style.display = 'none';
-        if (modalId === 'loginModal') { document.getElementById('login-error').style.display = 'none'; }
+        const modal = document.getElementById(modalId);
+        modal.classList.remove('open');
+        setTimeout(() => {
+            modal.style.display = 'none';
+            if (modalId === 'loginModal') { document.getElementById('login-error').style.display = 'none'; }
+        }, 300);
     }
 
     function switchToLogin() {
         closeModal('limitModal');
-        openModal('loginModal');
+        setTimeout(() => openModal('loginModal'), 350);
     }
 
     function processLogin() {
@@ -787,7 +901,7 @@
                 const randomIndex = Math.floor(Math.random() * Math.min(items.length, 15));
                 let rawHeadline = items[randomIndex].getElementsByTagName("title")[0].textContent;
                 let cleanedTopic = rawHeadline.split(" - ")[0];
-                currentRawPromptTopic = cleanedTopic; // Store raw text target
+                currentRawPromptTopic = cleanedTopic;
                 return `Analyze and share your thoughts on this trending global headline: "${cleanedTopic}"`;
             }
         } catch (err) {
@@ -823,6 +937,7 @@
 
         let time = 10;
         document.getElementById("countdown").innerText = `Starting in ${time}s...`;
+        document.getElementById("countdown").style.color = "#f7c948";
         triggerNotification("Live topic calculated. Prepare your speech alignment.", "info");
 
         recordingTimer = setInterval(() => {
@@ -836,6 +951,10 @@
                 
                 document.getElementById("start-btn").style.display = "none";
                 document.getElementById("stop-btn").style.display = "block";
+
+                // Morph recording camera pill block state colors natively
+                document.getElementById('vision-status-pill').style.backgroundColor = '#e94560';
+                document.getElementById('vision-status-text').innerText = "RECORDING AUDIO & VISION";
 
                 triggerNotification("Recorders initialized. Speak now!", "info");
 
@@ -881,23 +1000,25 @@
         }
 
         document.getElementById("countdown").innerText = "✅ Analysis Complete";
-        document.getElementById("countdown").style.color = "white";
+        document.getElementById("countdown").style.color = "#4cd137";
         document.getElementById("start-btn").style.display = "block";
         document.getElementById("start-btn").innerText = "Retake Test";
         
         document.getElementById("start-btn").disabled = false; 
         document.getElementById("stop-btn").style.display = "none";
 
+        // Revert camera feedback banner tracking status colors back to active idle
+        document.getElementById('vision-status-pill').style.backgroundColor = 'rgba(76, 209, 55, 0.85)';
+        document.getElementById('vision-status-text').innerText = "ML TRACKING ACTIVE";
+
         triggerNotification("Processing structural telemetry results...", "success");
         analyzeSpeech();
     }
 
-    // --- NEW: ADVANCED AI KEYWORD & SEMANTIC OVERLAP EVALUATOR ---
     function calculateTopicRelevance(speechText, topicText) {
         if (!speechText || !topicText) return 0;
 
         const cleanAndTokenize = (text) => {
-            // High-frequency grammar stop words to strip away for semantic core calculations
             const stopWords = new Set([
                 'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'arent', 'as', 'at',
                 'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', 'can', 'cant', 'cannot',
@@ -916,7 +1037,7 @@
             ]);
 
             return text.toLowerCase()
-                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "") // Clean out punctuation
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")
                 .split(/\s+/)
                 .filter(word => word.length > 2 && !stopWords.has(word));
         };
@@ -924,24 +1045,20 @@
         const topicTokens = cleanAndTokenize(topicText);
         const speechTokens = cleanAndTokenize(speechText);
 
-        if (topicTokens.length === 0) return 100; // Edge case backup fallback
+        if (topicTokens.length === 0) return 100; 
         if (speechTokens.length === 0) return 0;
 
-        // Build frequency profile maps
         const uniqueTopicWords = new Set(topicTokens);
         let matchingMatches = 0;
 
         uniqueTopicWords.forEach(word => {
-            // Look for matching roots or exact keywords inside spoken transcript
             if (speechTokens.some(speechWord => speechWord.includes(word) || word.includes(speechWord))) {
                 matchingMatches++;
             }
         });
 
-        // Calculate primary overlap density ratio
         let densityPercentage = (matchingMatches / uniqueTopicWords.size) * 100;
 
-        // Give extra weight adjustments based on contextual volume sizing
         if (densityPercentage > 0) {
             const contextualVolumeBonus = Math.min(25, speechTokens.length * 0.4); 
             densityPercentage += contextualVolumeBonus;
@@ -980,7 +1097,6 @@
             dynamicEyeScore = Math.round((successfulEyeContacts / eyeContactChecks) * 100);
         }
 
-        // --- NEW: Calculate Live Topic Relevance Allocation ---
         const relevanceScore = calculateTopicRelevance(text, currentRawPromptTopic);
 
         let overallScore = 100;
@@ -999,32 +1115,30 @@
             const eyeScorePenalty = 100 - dynamicEyeScore;
             overallScore -= Math.floor(eyeScorePenalty * 0.4);
 
-            // --- NEW: Weight Relevance Score dynamically into performance dashboard ---
-            // Penalize up to 30 points off the overall score if talking about unrelated things
             const relevancePenalty = Math.floor((100 - relevanceScore) * 0.3);
             overallScore -= relevancePenalty;
         }
 
         overallScore = Math.max(0, Math.min(100, overallScore));
 
+        // Animated counting update loops can be heavy, text morph updates are cleanly handled below
         document.getElementById("wpm-result").innerText = wpm;
         document.getElementById("filler-result").innerText = fillerCount;
         document.getElementById("eye-contact-result").innerText = `${dynamicEyeScore}%`;
-        document.getElementById("eye-contact-result").style.color = "#f7c948"; 
         
-        // --- NEW: Render Relevance Output Metrics into DOM UI ---
         const relevanceElement = document.getElementById("relevance-result");
         relevanceElement.innerText = `${relevanceScore}%`;
         if (relevanceScore >= 60) {
-            relevanceElement.style.color = "#4cd137"; // Green alignment matching
+            relevanceElement.style.color = "#4cd137"; 
         } else if (relevanceScore >= 35) {
-            relevanceElement.style.color = "#f7c948"; // Warning yellow deviation
+            relevanceElement.style.color = "#f7c948"; 
         } else {
-            relevanceElement.style.color = "#e94560"; // Unrelated content flag red
+            relevanceElement.style.color = "#e94560"; 
         }
         
         document.getElementById("overall-score-result").innerText = `${overallScore} / 100`;
         
+        // Show panel dashboard and scroll with fluid hardware acceleration animations
         document.getElementById("analysis-card").style.display = "block";
         document.getElementById("analysis-card").scrollIntoView({ behavior: 'smooth' });
         
