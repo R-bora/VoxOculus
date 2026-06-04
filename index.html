@@ -251,6 +251,12 @@
     #topic { font-size: 22px; color: #f7c948; margin: 20px 0 10px 0; line-height: 1.4; }
     #countdown { font-size: 32px; font-weight: bold; margin-bottom: 15px; transition: color 0.3s ease; }
     
+    /* Container to drop text box during runtime */
+    #transcript-area-wrapper {
+        display: none; /* Controlled dynamically via JavaScript runtime flags */
+        animation: fadeIn 0.5s ease forwards;
+    }
+
     /* Input Textareas with Fluid Glow Accent Frames */
     textarea {
         width: 100%;
@@ -528,8 +534,11 @@
             </div>
             <div id="topic"></div>
             <div id="countdown"></div>
-            <h2>Live Transcript</h2>
-            <textarea id="transcript" placeholder="Your recorded real-time speech will render here..."></textarea>
+            
+            <div id="transcript-area-wrapper">
+                <h2>Live Transcript Output</h2>
+                <textarea id="transcript" placeholder="Your recorded speech text output renders here..."></textarea>
+            </div>
         </div>
         <div class="card">
             <h2>AI Vision Tracking</h2>
@@ -642,17 +651,13 @@
     let lockedTranscript = ""; 
     let currentSessionTranscript = "";
 
-    // NEW MOBILE FIX: Safely checks if the mobile browser is repeating a sentence chunk
     function isDuplicatePhrase(newPhrase, existingText) {
         let cleanNew = newPhrase.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
         let cleanExisting = existingText.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
         
         if (!cleanNew || !cleanExisting) return false;
-        
-        // Direct exact overlap check
         if (cleanExisting.endsWith(cleanNew)) return true;
         
-        // Sliding window lookback check to catch minor variations in mobile stream restarts
         let trailingContext = cleanExisting.slice(-Math.max(40, cleanNew.length + 15));
         if (trailingContext.includes(cleanNew)) return true;
 
@@ -663,7 +668,7 @@
         recognition = new SpeechRecognition();
         
         recognition.continuous = true; 
-        recognition.interimResults = false;
+        recognition.interimResults = true; // Kept true so background buffers stay updated instantly without delays
         recognition.lang = 'en-US';
 
         recognition.onresult = (event) => {
@@ -673,13 +678,9 @@
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
                     let textBlock = event.results[i][0].transcript.trim();
-                    
-                    // Filter out mobile duplicate ghosts using the helper function above
                     let fullCurrentText = lockedTranscript + " " + currentSessionTranscript;
                     if (!isDuplicatePhrase(textBlock, fullCurrentText)) {
                         final += textBlock + " ";
-                    } else {
-                        console.log("🔥 AI blocked a ghost sentence repeat: ", textBlock);
                     }
                 } else {
                     interim += event.results[i][0].transcript;
@@ -690,6 +691,7 @@
                 currentSessionTranscript += final;
             }
             
+            // Continually write to standard text node hidden under background layer
             document.getElementById("transcript").value = (lockedTranscript + currentSessionTranscript + interim).trim();
         };
 
@@ -698,9 +700,6 @@
             if (event.error === 'not-allowed') {
                 triggerNotification("Microphone blocked! Please allow mic access in your browser.", "error");
             } 
-            if (event.error === 'aborted' && isTrackingActive) {
-                console.log("Speech context aborted. Attempting recovery...");
-            }
         };
 
         recognition.onend = () => {
@@ -718,7 +717,7 @@
                     } catch (err) {
                         console.log("Mic loop safely recovered.");
                     }
-                }, 300);
+                }, 100);
             }
         };
     } else {
@@ -817,7 +816,6 @@
                 canvasContext.fillText("⚠️ LOOKING AWAY", 20, 30);
             }
 
-            // Glow tracking circle animation onto canvas layout framework
             canvasContext.fillStyle = isLookingForward ? '#4cd137' : '#e94560';
             canvasContext.shadowBlur = 10;
             canvasContext.shadowColor = isLookingForward ? '#4cd137' : '#e94560';
@@ -917,9 +915,24 @@
         const targetRss = "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVd3U00xOWhNutIBR2dCR2V3b0FQAQ?hl=en-US&gl=US&ceid=US:en";
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetRss)}`;
 
+        // Set up local fast array first to serve as lightning-fast backup context
+        const fallbacks = [
+            "The expansion of autonomous electric mass transit networks.",
+            "Impact of generative artificial intelligence on educational evaluation formats.",
+            "Sustainable architecture solutions for dense smart urban communities.",
+            "The future of decentralized remote digital workplaces.",
+            "How global supply chains are adapting to renewable energy transitions."
+        ];
+        const chosenFallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+
+        // Create a fast-timeout controller for the network fetch
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1800); // 1.8 second limit for ultra-fast generation
+
         try {
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error("Network error fetching live feed.");
+            const response = await fetch(proxyUrl, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error();
             
             const data = await response.json();
             const parser = new DOMParser();
@@ -927,24 +940,18 @@
             const items = xmlDoc.getElementsByTagName("item");
             
             if (items.length > 0) {
-                const randomIndex = Math.floor(Math.random() * Math.min(items.length, 15));
+                const randomIndex = Math.floor(Math.random() * Math.min(items.length, 20));
                 let rawHeadline = items[randomIndex].getElementsByTagName("title")[0].textContent;
                 let cleanedTopic = rawHeadline.split(" - ")[0];
                 currentRawPromptTopic = cleanedTopic;
                 return `Analyze and share your thoughts on this trending global headline: "${cleanedTopic}"`;
             }
         } catch (err) {
-            console.error("CORS Feed fallback active:", err);
+            console.log("Using local high-speed prompt generation routing.");
         }
         
-        const fallbacks = [
-            "Discuss the global economic shift toward alternative technologies and engineering.",
-            "Analyze the impact of remote collaboration platforms on corporate office cultures.",
-            "What measures should modern smart cities adopt to handle energy storage challenges?"
-        ];
-        const chosenFallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
         currentRawPromptTopic = chosenFallback;
-        return chosenFallback;
+        return `Analyze and share your thoughts on this modern focus topic: "${chosenFallback}"`;
     }
 
     async function startTest() {
@@ -957,6 +964,9 @@
         lockedTranscript = "";
         currentSessionTranscript = "";
         document.getElementById("transcript").value = "";
+        
+        // Hide both transcript field and evaluation results during active testing runtime
+        document.getElementById("transcript-area-wrapper").style.display = "none";
         document.getElementById("analysis-card").style.display = "none";
         document.getElementById("start-btn").disabled = true;
         
@@ -1036,6 +1046,9 @@
 
         document.getElementById('vision-status-pill').style.backgroundColor = 'rgba(76, 209, 55, 0.85)';
         document.getElementById('vision-status-text').innerText = "ML TRACKING ACTIVE";
+
+        // Unveil the complete text layout element block simultaneously with telemetry score card
+        document.getElementById("transcript-area-wrapper").style.display = "block";
 
         triggerNotification("Processing structural telemetry results...", "success");
         analyzeSpeech();
@@ -1169,3 +1182,5 @@
         triggerNotification("Performance scoreboard generation successful!", "success");
     }
 </script>
+</body>
+</html>
