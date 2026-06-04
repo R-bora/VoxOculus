@@ -633,97 +633,101 @@
         });
     });
 
-    // --- Initialize Speech Recognition Core APIs ---
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition;
-    let recordingStartTime;
-    let recordingTimer;
-    
-    let lockedTranscript = ""; 
-    let currentSessionTranscript = "";
+   // --- Initialize Speech Recognition Core APIs ---
+const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    // NEW MOBILE FIX: Safely checks if the mobile browser is repeating a sentence chunk
-    function isDuplicatePhrase(newPhrase, existingText) {
-        let cleanNew = newPhrase.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
-        let cleanExisting = existingText.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
-        
-        if (!cleanNew || !cleanExisting) return false;
-        
-        // Direct exact overlap check
-        if (cleanExisting.endsWith(cleanNew)) return true;
-        
-        // Sliding window lookback check to catch minor variations in mobile stream restarts
-        let trailingContext = cleanExisting.slice(-Math.max(40, cleanNew.length + 15));
-        if (trailingContext.includes(cleanNew)) return true;
+let recognition;
+let recordingStartTime;
+let recordingTimer;
 
-        return false;
-    }
+if (SpeechRecognition) {
 
-    if (SpeechRecognition) {
-        recognition = new SpeechRecognition();
-        
-        recognition.continuous = true; 
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
+    recognition = new SpeechRecognition();
 
-        recognition.onresult = (event) => {
-            let interim = "";
-            let final = "";
-            
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    let textBlock = event.results[i][0].transcript.trim();
-                    
-                    // Filter out mobile duplicate ghosts using the helper function above
-                    let fullCurrentText = lockedTranscript + " " + currentSessionTranscript;
-                    if (!isDuplicatePhrase(textBlock, fullCurrentText)) {
-                        final += textBlock + " ";
-                    } else {
-                        console.log("🔥 AI blocked a ghost sentence repeat: ", textBlock);
-                    }
-                } else {
-                    interim += event.results[i][0].transcript;
+    recognition.lang = "en-US";
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+        console.log("Speech recognition started");
+    };
+
+    recognition.onresult = (event) => {
+
+        const transcriptBox =
+            document.getElementById("transcript");
+
+        let finalText = "";
+
+        for (
+            let i = event.resultIndex;
+            i < event.results.length;
+            i++
+        ) {
+
+            if (event.results[i].isFinal) {
+
+                finalText +=
+                    event.results[i][0].transcript + " ";
+            }
+        }
+
+        if (finalText.trim()) {
+
+            transcriptBox.value =
+                (transcriptBox.value + " " + finalText)
+                    .replace(/\s+/g, " ")
+                    .trim();
+        }
+    };
+
+    recognition.onerror = (event) => {
+
+        console.error(
+            "Speech recognition error:",
+            event.error
+        );
+
+        if (event.error === "not-allowed") {
+
+            triggerNotification(
+                "Microphone blocked! Please allow microphone access.",
+                "error"
+            );
+        }
+    };
+
+    recognition.onend = () => {
+
+        if (isTrackingActive) {
+
+            setTimeout(() => {
+
+                try {
+                    recognition.start();
+                } catch (err) {
+                    console.log(
+                        "Recognition restart prevented."
+                    );
                 }
-            }
-            
-            if (final.trim() !== "") {
-                currentSessionTranscript += final;
-            }
-            
-            document.getElementById("transcript").value = (lockedTranscript + currentSessionTranscript + interim).trim();
-        };
 
-        recognition.onerror = (event) => {
-            console.error("Speech recognition error:", event.error);
-            if (event.error === 'not-allowed') {
-                triggerNotification("Microphone blocked! Please allow mic access in your browser.", "error");
-            } 
-            if (event.error === 'aborted' && isTrackingActive) {
-                console.log("Speech context aborted. Attempting recovery...");
-            }
-        };
+            }, 300);
+        }
+    };
 
-        recognition.onend = () => {
-            if (currentSessionTranscript.trim() !== "") {
-                if (!isDuplicatePhrase(currentSessionTranscript, lockedTranscript)) {
-                    lockedTranscript = (lockedTranscript + " " + currentSessionTranscript).trim() + " ";
-                }
-            }
-            currentSessionTranscript = ""; 
-            
-            if (isTrackingActive) {
-                setTimeout(() => {
-                    try {
-                        if (isTrackingActive) recognition.start();
-                    } catch (err) {
-                        console.log("Mic loop safely recovered.");
-                    }
-                }, 300);
-            }
-        };
-    } else {
-        triggerNotification("Speech recognition is unavailable on this browser. Try Google Chrome.", "error");
-    }
+} else {
+
+    setTimeout(() => {
+
+        triggerNotification(
+            "Speech recognition is unavailable on this browser. Try Google Chrome.",
+            "error"
+        );
+
+    }, 500);
+}
 
     function triggerNotification(message, type = 'info') {
         const container = document.getElementById('notification-zone');
