@@ -641,7 +641,23 @@
     
     let lockedTranscript = ""; 
     let currentSessionTranscript = "";
-    let lastFinalTranscript = ""; // FIX: Prevent phrase duplicates on mobile engines
+
+    // NEW MOBILE FIX: Safely checks if the mobile browser is repeating a sentence chunk
+    function isDuplicatePhrase(newPhrase, existingText) {
+        let cleanNew = newPhrase.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
+        let cleanExisting = existingText.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
+        
+        if (!cleanNew || !cleanExisting) return false;
+        
+        // Direct exact overlap check
+        if (cleanExisting.endsWith(cleanNew)) return true;
+        
+        // Sliding window lookback check to catch minor variations in mobile stream restarts
+        let trailingContext = cleanExisting.slice(-Math.max(40, cleanNew.length + 15));
+        if (trailingContext.includes(cleanNew)) return true;
+
+        return false;
+    }
 
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
@@ -656,11 +672,14 @@
             
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
-                    let text = event.results[i][0].transcript.trim();
-                    // FIX: Mobile double-firing filter check
-                    if (text !== lastFinalTranscript) {
-                        final += text + " ";
-                        lastFinalTranscript = text;
+                    let textBlock = event.results[i][0].transcript.trim();
+                    
+                    // Filter out mobile duplicate ghosts using the helper function above
+                    let fullCurrentText = lockedTranscript + " " + currentSessionTranscript;
+                    if (!isDuplicatePhrase(textBlock, fullCurrentText)) {
+                        final += textBlock + " ";
+                    } else {
+                        console.log("🔥 AI blocked a ghost sentence repeat: ", textBlock);
                     }
                 } else {
                     interim += event.results[i][0].transcript;
@@ -685,12 +704,12 @@
         };
 
         recognition.onend = () => {
-            // FIX: Append safely without repeating text when mobile forcibly drops the mic stream
             if (currentSessionTranscript.trim() !== "") {
-                lockedTranscript = (lockedTranscript + " " + currentSessionTranscript).trim() + " ";
+                if (!isDuplicatePhrase(currentSessionTranscript, lockedTranscript)) {
+                    lockedTranscript = (lockedTranscript + " " + currentSessionTranscript).trim() + " ";
+                }
             }
             currentSessionTranscript = ""; 
-            lastFinalTranscript = ""; // Reset for the next phrase cycle
             
             if (isTrackingActive) {
                 setTimeout(() => {
@@ -798,14 +817,13 @@
                 canvasContext.fillText("⚠️ LOOKING AWAY", 20, 30);
             }
 
-            // Animated glowing telemetry node circle on face mesh nose coordinate
+            // Glow tracking circle animation onto canvas layout framework
             canvasContext.fillStyle = isLookingForward ? '#4cd137' : '#e94560';
             canvasContext.shadowBlur = 10;
             canvasContext.shadowColor = isLookingForward ? '#4cd137' : '#e94560';
             canvasContext.beginPath();
             canvasContext.arc(nose.x * visualizerCanvas.width, nose.y * visualizerCanvas.height, 5, 0, 2 * Math.PI);
             canvasContext.fill();
-            // Reset shadows for upcoming loop draws
             canvasContext.shadowBlur = 0;
         } else {
             isLookingAtCamera = false;
@@ -820,7 +838,6 @@
         visualizerCanvas.height = webcamVideo.offsetHeight;
     }
 
-    // --- Modal Slide/Scale Presentation Architectures ---
     function openModal(modalId) {
         const modal = document.getElementById(modalId);
         modal.style.display = 'flex';
@@ -894,7 +911,6 @@
         }
     }
 
-    // --- DYNAMIC GOOGLE TRENDS / NEWS TOPIC GENERATOR ---
     async function fetchLiveTrendingTopic() {
         document.getElementById("topic").innerText = "Generating live trending topic...";
         
@@ -931,7 +947,6 @@
         return chosenFallback;
     }
 
-    // --- Recording Session Evaluation Architectures ---
     async function startTest() {
         if (testCount >= MAX_FREE_TESTS && !isLoggedIn) {
             openModal('limitModal');
@@ -965,7 +980,6 @@
                 document.getElementById("start-btn").style.display = "none";
                 document.getElementById("stop-btn").style.display = "block";
 
-                // Morph recording camera pill block state colors natively
                 document.getElementById('vision-status-pill').style.backgroundColor = '#e94560';
                 document.getElementById('vision-status-text').innerText = "RECORDING AUDIO & VISION";
 
@@ -1020,7 +1034,6 @@
         document.getElementById("start-btn").disabled = false; 
         document.getElementById("stop-btn").style.display = "none";
 
-        // Revert camera feedback banner tracking status colors back to active idle
         document.getElementById('vision-status-pill').style.backgroundColor = 'rgba(76, 209, 55, 0.85)';
         document.getElementById('vision-status-text').innerText = "ML TRACKING ACTIVE";
 
@@ -1134,7 +1147,6 @@
 
         overallScore = Math.max(0, Math.min(100, overallScore));
 
-        // Animated counting update loops can be heavy, text morph updates are cleanly handled below
         document.getElementById("wpm-result").innerText = wpm;
         document.getElementById("filler-result").innerText = fillerCount;
         document.getElementById("eye-contact-result").innerText = `${dynamicEyeScore}%`;
@@ -1151,12 +1163,9 @@
         
         document.getElementById("overall-score-result").innerText = `${overallScore} / 100`;
         
-        // Show panel dashboard and scroll with fluid hardware acceleration animations
         document.getElementById("analysis-card").style.display = "block";
         document.getElementById("analysis-card").scrollIntoView({ behavior: 'smooth' });
         
         triggerNotification("Performance scoreboard generation successful!", "success");
     }
 </script>
-</body>
-</html>
