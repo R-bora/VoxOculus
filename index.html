@@ -1,1299 +1,1171 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice & Vision Analyzer Pro</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice & Vision Analyzer Pro</title>
 
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 
-    <style>
-        /* General Reset & Animated Background Gradient */
-        html {
-            scroll-behavior: smooth;
-        }
+<style>
+    /* General Reset & Animated Background Gradient */
+    html { scroll-behavior: smooth; }
+    body {
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #0b1020 0%, #111a36 100%);
+        color: white;
+        margin: 0;
+        padding-top: 80px;
+        overflow-x: hidden;
+    }
 
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #0b1020 0%, #111a36 100%);
-            color: white;
-            margin: 0;
-            padding-top: 80px;
-            overflow-x: hidden;
-        }
+   /* Fixed Navigation Bar with Soft Blur */
+    .navbar {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        background: rgba(22, 33, 62, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        padding: 15px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        z-index: 1000;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .nav-brand {
+        font-size: 20px;
+        font-weight: bold;
+        color: #f7c948;
+        white-space: nowrap;
+        transition: transform 0.3s ease;
+    }
+    .nav-brand:hover {
+        transform: scale(1.03);
+    }
+    .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+    .nav-links a {
+        color: white;
+        text-decoration: none;
+        font-size: 16px;
+        position: relative;
+        transition: color 0.3s;
+    }
+    .nav-links a:hover { color: #f7c948; }
+    /* Animated Hover Underline Link Effect */
+    .nav-links a::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        transform: scaleX(0);
+        height: 2px;
+        bottom: -4px;
+        left: 0;
+        background-color: #f7c948;
+        transform-origin: bottom right;
+        transition: transform 0.25s ease-out;
+    }
+    .nav-links a:hover::after {
+        transform: scaleX(1);
+        transform-origin: bottom left;
+    }
+    .login-btn {
+        background: transparent;
+        border: 2px solid #f7c948;
+        color: #f7c948;
+        padding: 8px 18px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+    .login-btn:hover {
+        background: #f7c948;
+        color: #16213e;
+        box-shadow: 0 0 15px rgba(247, 201, 72, 0.4);
+    }
+    .user-greeting {
+        display: none;
+        color: #4cd137;
+        font-weight: bold;
+        animation: fadeIn 0.5s ease forwards;
+    }
 
-        /* Fixed Navigation Bar with Soft Blur */
-        .navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: rgba(22, 33, 62, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-            z-index: 1000;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
+    /* Hamburger Icon Styling */
+    .hamburger {
+        display: none;
+        flex-direction: column;
+        justify-content: space-between;
+        width: 28px;
+        height: 20px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        z-index: 1001;
+    }
+    .hamburger span {
+        width: 100%;
+        height: 3px;
+        background-color: #f7c948;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+    }
 
-        .nav-brand {
-            font-size: 20px;
-            font-weight: bold;
-            color: #f7c948;
-            white-space: nowrap;
-            transition: transform 0.3s ease;
-        }
+    /* Main Container */
+    .container {
+        max-width: 1000px;
+        margin: auto;
+        padding: 20px;
+        min-height: 80vh;
+    }
+    
+    .workspace-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
 
-        .nav-brand:hover {
-            transform: scale(1.03);
-        }
+    /* Cards with Hover Shadow Animation */
+    .card {
+        background: #16213e;
+        padding: 25px;
+        border-radius: 16px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        height: fit-content;
+        transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
+    }
+    .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+    }
+    
+    /* Video Area with Scanning Laser Visual Mesh Lines Effect */
+    .video-container {
+        position: relative;
+        width: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #000;
+        aspect-ratio: 4 / 3;
+    }
+    /* Animated overlay laser scan bar */
+    .video-container::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(to right, transparent, rgba(247, 201, 72, 0.6), transparent);
+        animation: scanline 4s linear infinite;
+        pointer-events: none;
+        z-index: 4;
+    }
+    #webcam-view {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scaleX(-1);
+    }
+    #visualizer-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 5;
+        pointer-events: none;
+    }
+    .live-status-pill {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        background: rgba(233, 69, 96, 0.85);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: background-color 0.4s ease;
+    }
+    .live-status-pill .pulse-dot {
+        width: 8px;
+        height: 8px;
+        background-color: #fff;
+        border-radius: 50%;
+        animation: pulse 1.5s infinite;
+    }
 
+    /* Core Dynamic Keyframe Animation Architectures */
+    @keyframes pulse {
+        0% { transform: scale(0.8); opacity: 0.3; }
+        50% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(0.8); opacity: 0.3; }
+    }
+    @keyframes scanline {
+        0% { top: 0%; }
+        50% { top: 100%; }
+        100% { top: 0%; }
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+
+    /* Buttons with Spring Feedback Transitions */
+    button {
+        background: #f7c948;
+        border: none;
+        padding: 12px 22px;
+        border-radius: 10px;
+        font-weight: bold;
+        font-size: 16px;
+        cursor: pointer;
+        color: #16213e;
+        transition: transform 0.1s ease, background-color 0.3s ease, box-shadow 0.3s;
+    }
+    button:hover:not(:disabled) {
+        box-shadow: 0 5px 15px rgba(247, 201, 72, 0.3);
+    }
+    button:active { transform: scale(0.95); }
+    button:disabled { background: #555; color: #888; cursor: not-allowed; }
+    #stop-btn { background: #e94560; color: white; display: none; }
+    #stop-btn:hover { box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4); }
+    .test-counter { font-size: 14px; color: #8892b0; margin-top: 10px; transition: color 0.3s; }
+
+    /* Typography & Inputs */
+    #topic { font-size: 22px; color: #f7c948; margin: 20px 0 10px 0; line-height: 1.4; }
+    #countdown { font-size: 32px; font-weight: bold; margin-bottom: 15px; transition: color 0.3s ease; }
+    
+    /* Input Textareas with Fluid Glow Accent Frames */
+    textarea {
+        width: 100%;
+        height: 120px;
+        margin-top: 15px;
+        background: #0b1020;
+        color: white;
+        border: 1px solid #2a3b5c;
+        border-radius: 8px;
+        padding: 15px;
+        font-size: 16px;
+        box-sizing: border-box;
+        resize: vertical;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    textarea:focus {
+        outline: none;
+        border-color: #f7c948;
+        box-shadow: 0 0 10px rgba(247, 201, 72, 0.15);
+    }
+
+    /* Analysis Dashboard Panel with Entry Fading Animation */
+    #analysis-card { 
+        display: none; 
+        margin-top: 20px; 
+        animation: fadeIn 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+    }
+    .analysis-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    .stat-box {
+        background: #0b1020;
+        border: 1px solid #2a3b5c;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+        transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+    .stat-box:hover {
+        transform: scale(1.02);
+        border-color: #4a6296;
+    }
+    .stat-title { font-size: 14px; color: #8892b0; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-value { font-size: 32px; font-weight: bold; color: #f7c948; margin-top: 10px; transition: color 0.3s; }
+    
+    .overall-score-container {
+        margin-top: 25px;
+        padding: 25px;
+        background: linear-gradient(135deg, #f7c948 0%, #f9a826 100%);
+        border-radius: 12px;
+        text-align: center;
+        color: #16213e;
+        position: relative;
+        overflow: hidden;
+    }
+    /* Ambient Shimmer Light Wave Effect running background over performance card */
+    .overall-score-container::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; width: 200%; height: 100%;
+        background: linear-gradient(to right, transparent, rgba(255,255,255,0.25), transparent);
+        animation: shimmer 3.5s infinite linear;
+    }
+    .overall-score-title { font-size: 18px; font-weight: bold; text-transform: uppercase; z-index: 2; position: relative; }
+    .overall-score-value { font-size: 48px; font-weight: bold; margin-top: 5px; z-index: 2; position: relative; }
+
+    /* Content Sections */
+    .content-section {
+        padding: 60px 20px;
+        max-width: 900px;
+        margin: auto;
+        border-top: 1px solid #2a3b5c;
+    }
+
+    /* Modals with Overlay Darkening Transforms */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 2000;
+        justify-content: center;
+        align-items: center;
+        backdrop-filter: blur(4px);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .modal-overlay.open {
+        opacity: 1;
+    }
+    .modal-box {
+        background: #16213e;
+        padding: 30px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 400px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+        text-align: center;
+        transform: scale(0.85);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .modal-overlay.open .modal-box {
+        transform: scale(1);
+    }
+    .modal-box h2 { margin-top: 0; color: #f7c948; }
+    .modal-box p { color: #d1d5db; line-height: 1.5; }
+    .modal-box input {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        border-radius: 6px;
+        border: 1px solid #2a3b5c;
+        background: #0b1020;
+        color: white;
+        box-sizing: border-box;
+        transition: border-color 0.3s;
+    }
+    .modal-box input:focus { outline: none; border-color: #f7c948; }
+    .modal-box button { width: 100%; margin-top: 10px; }
+    
+    .google-btn {
+        background: #ffffff;
+        color: #333;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    .google-btn:hover { background: #f1f1f1; }
+    
+    .close-btn {
+        background: transparent;
+        color: #8892b0;
+        margin-top: 15px;
+        padding: 0;
+        font-size: 14px;
+    }
+    .close-btn:hover { color: white; background: transparent; }
+    
+    #login-error {
+        color: #e94560;
+        font-size: 14px;
+        background: rgba(233, 69, 96, 0.1);
+        padding: 8px;
+        border-radius: 4px;
+        display: none;
+        margin-bottom: 10px;
+        animation: fadeIn 0.3s ease;
+    }
+
+    /* Toast Notification Floating Queue Stack System */
+    .notification-container {
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .toast-notification {
+        background: #16213e;
+        border-left: 4px solid #f7c948;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 15px;
+        min-width: 280px;
+        max-width: 400px;
+        transform: translateX(120%);
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2), opacity 0.3s;
+        opacity: 0;
+    }
+    .toast-notification.show { transform: translateX(0); opacity: 1; }
+    .toast-notification.success { border-left-color: #4cd137; }
+    .toast-notification.error { border-left-color: #e94560; }
+    .toast-notification.info { border-left-color: #38a1f3; }
+
+    @media (max-width: 768px) {
+        .navbar { padding: 15px 20px; }
+        .hamburger { display: flex; }
         .nav-links {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            font-size: 16px;
-            position: relative;
-            transition: color 0.3s;
-        }
-
-        .nav-links a:hover {
-            color: #f7c948;
-        }
-
-        /* Animated Hover Underline Link Effect */
-        .nav-links a::after {
-            content: '';
             position: absolute;
-            width: 100%;
-            transform: scaleX(0);
-            height: 2px;
-            bottom: -4px;
-            left: 0;
-            background-color: #f7c948;
-            transform-origin: bottom right;
-            transition: transform 0.25s ease-out;
-        }
-
-        .nav-links a:hover::after {
-            transform: scaleX(1);
-            transform-origin: bottom left;
-        }
-
-        .login-btn {
-            background: transparent;
-            border: 2px solid #f7c948;
-            color: #f7c948;
-            padding: 8px 18px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-        }
-
-        .login-btn:hover {
-            background: #f7c948;
-            color: #16213e;
-            box-shadow: 0 0 15px rgba(247, 201, 72, 0.4);
-        }
-
-        .user-greeting {
-            display: none;
-            color: #4cd137;
-            font-weight: bold;
-            animation: fadeIn 0.5s ease forwards;
-        }
-
-        /* Hamburger Icon Styling */
-        .hamburger {
-            display: none;
+            top: 100%; left: 0; right: 0;
+            background: rgba(22, 33, 62, 0.95);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
             flex-direction: column;
-            justify-content: space-between;
-            width: 28px;
-            height: 20px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            padding: 0;
-            z-index: 1001;
+            padding: 20px; gap: 25px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+            transition: clip-path 0.4s ease-in-out;
+            visibility: hidden;
         }
-
-        .hamburger span {
-            width: 100%;
-            height: 3px;
-            background-color: #f7c948;
-            border-radius: 5px;
-            transition: all 0.3s ease;
+        .nav-links.active {
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+            visibility: visible;
         }
-
-        /* Main Container */
-        .container {
-            max-width: 1000px;
-            margin: auto;
-            padding: 20px;
-            min-height: 80vh;
-        }
-
-        .workspace-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        /* Cards with Hover Shadow Animation */
-        .card {
-            background: #16213e;
-            padding: 25px;
-            border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            height: fit-content;
-            transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-        }
-
-        /* Video Area with Scanning Laser Visual Mesh Lines Effect */
-        .video-container {
-            position: relative;
-            width: 100%;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #000;
-            aspect-ratio: 4 / 3;
-        }
-
-        /* Animated overlay laser scan bar */
-        .video-container::after {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(to right, transparent, rgba(247, 201, 72, 0.6), transparent);
-            animation: scanline 4s linear infinite;
-            pointer-events: none;
-            z-index: 4;
-        }
-
-        #webcam-view {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transform: scaleX(-1);
-        }
-
-        #visualizer-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 5;
-            pointer-events: none;
-        }
-
-        .live-status-pill {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            background: rgba(233, 69, 96, 0.85);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: background-color 0.4s ease;
-        }
-
-        .live-status-pill .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background-color: #fff;
-            border-radius: 50%;
-            animation: pulse 1.5s infinite;
-        }
-
-        /* Core Dynamic Keyframe Animation Architectures */
-        @keyframes pulse {
-            0% {
-                transform: scale(0.8);
-                opacity: 0.3;
-            }
-
-            50% {
-                transform: scale(1.2);
-                opacity: 1;
-            }
-
-            100% {
-                transform: scale(0.8);
-                opacity: 0.3;
-            }
-        }
-
-        @keyframes scanline {
-            0% {
-                top: 0%;
-            }
-
-            50% {
-                top: 100%;
-            }
-
-            100% {
-                top: 0%;
-            }
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes shimmer {
-            0% {
-                background-position: -200% 0;
-            }
-
-            100% {
-                background-position: 200% 0;
-            }
-        }
-
-        /* Buttons with Spring Feedback Transitions */
-        button {
-            background: #f7c948;
-            border: none;
-            padding: 12px 22px;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-            color: #16213e;
-            transition: transform 0.1s ease, background-color 0.3s ease, box-shadow 0.3s;
-        }
-
-        button:hover:not(:disabled) {
-            box-shadow: 0 5px 15px rgba(247, 201, 72, 0.3);
-        }
-
-        button:active {
-            transform: scale(0.95);
-        }
-
-        button:disabled {
-            background: #555;
-            color: #888;
-            cursor: not-allowed;
-        }
-
-        #stop-btn {
-            background: #e94560;
-            color: white;
-            display: none;
-        }
-
-        #stop-btn:hover {
-            box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4);
-        }
-
-        .test-counter {
-            font-size: 14px;
-            color: #8892b0;
-            margin-top: 10px;
-            transition: color 0.3s;
-        }
-
-        /* Typography & Inputs */
-        #topic {
-            font-size: 22px;
-            color: #f7c948;
-            margin: 20px 0 10px 0;
-            line-height: 1.4;
-        }
-
-        #countdown {
-            font-size: 32px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            transition: color 0.3s ease;
-        }
-
-        /* Input Textareas with Fluid Glow Accent Frames */
-        textarea {
-            width: 100%;
-            height: 120px;
-            margin-top: 15px;
-            background: #0b1020;
-            color: white;
-            border: 1px solid #2a3b5c;
-            border-radius: 8px;
-            padding: 15px;
-            font-size: 16px;
-            box-sizing: border-box;
-            resize: vertical;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: #f7c948;
-            box-shadow: 0 0 10px rgba(247, 201, 72, 0.15);
-        }
-
-        /* Analysis Dashboard Panel with Entry Fading Animation */
-        #analysis-card {
-            display: none;
-            margin-top: 20px;
-            animation: fadeIn 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
-        }
-
-        .analysis-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .stat-box {
-            background: #0b1020;
-            border: 1px solid #2a3b5c;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            transition: transform 0.3s ease, border-color 0.3s ease;
-        }
-
-        .stat-box:hover {
-            transform: scale(1.02);
-            border-color: #4a6296;
-        }
-
-        .stat-title {
-            font-size: 14px;
-            color: #8892b0;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .stat-value {
-            font-size: 32px;
-            font-weight: bold;
-            color: #f7c948;
-            margin-top: 10px;
-            transition: color 0.3s;
-        }
-
-        .overall-score-container {
-            margin-top: 25px;
-            padding: 25px;
-            background: linear-gradient(135deg, #f7c948 0%, #f9a826 100%);
-            border-radius: 12px;
-            text-align: center;
-            color: #16213e;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Ambient Shimmer Light Wave Effect running background over performance card */
-        .overall-score-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 200%;
-            height: 100%;
-            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.25), transparent);
-            animation: shimmer 3.5s infinite linear;
-        }
-
-        .overall-score-title {
-            font-size: 18px;
-            font-weight: bold;
-            text-transform: uppercase;
-            z-index: 2;
-            position: relative;
-        }
-
-        .overall-score-value {
-            font-size: 48px;
-            font-weight: bold;
-            margin-top: 5px;
-            z-index: 2;
-            position: relative;
-        }
-
-        /* Content Sections */
-        .content-section {
-            padding: 60px 20px;
-            max-width: 900px;
-            margin: auto;
-            border-top: 1px solid #2a3b5c;
-        }
-
-        /* Modals with Overlay Darkening Transforms */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 2000;
-            justify-content: center;
-            align-items: center;
-            backdrop-filter: blur(4px);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .modal-overlay.open {
-            opacity: 1;
-        }
-
-        .modal-box {
-            background: #16213e;
-            padding: 30px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 400px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-            text-align: center;
-            transform: scale(0.85);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .modal-overlay.open .modal-box {
-            transform: scale(1);
-        }
-
-        .modal-box h2 {
-            margin-top: 0;
-            color: #f7c948;
-        }
-
-        .modal-box p {
-            color: #d1d5db;
-            line-height: 1.5;
-        }
-
-        .modal-box input {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 6px;
-            border: 1px solid #2a3b5c;
-            background: #0b1020;
-            color: white;
-            box-sizing: border-box;
-            transition: border-color 0.3s;
-        }
-
-        .modal-box input:focus {
-            outline: none;
-            border-color: #f7c948;
-        }
-
-        .modal-box button {
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        .google-btn {
-            background: #ffffff;
-            color: #333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .google-btn:hover {
-            background: #f1f1f1;
-        }
-
-        .close-btn {
-            background: transparent;
-            color: #8892b0;
-            margin-top: 15px;
-            padding: 0;
-            font-size: 14px;
-        }
-
-        .close-btn:hover {
-            color: white;
-            background: transparent;
-        }
-
-        #login-error {
-            color: #e94560;
-            font-size: 14px;
-            background: rgba(233, 69, 96, 0.1);
-            padding: 8px;
-            border-radius: 4px;
-            display: none;
-            margin-bottom: 10px;
-            animation: fadeIn 0.3s ease;
-        }
-
-        /* Toast Notification Floating Queue Stack System */
-        .notification-container {
-            position: fixed;
-            bottom: 25px;
-            right: 25px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .toast-notification {
-            background: #16213e;
-            border-left: 4px solid #f7c948;
-            color: white;
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 15px;
-            min-width: 280px;
-            max-width: 400px;
-            transform: translateX(120%);
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2), opacity 0.3s;
-            opacity: 0;
-        }
-
-        .toast-notification.show {
-            transform: translateX(0);
-            opacity: 1;
-        }
-
-        .toast-notification.success {
-            border-left-color: #4cd137;
-        }
-
-        .toast-notification.error {
-            border-left-color: #e94560;
-        }
-
-        .toast-notification.info {
-            border-left-color: #38a1f3;
-        }
-
-        @media (max-width: 768px) {
-            .navbar {
-                padding: 15px 20px;
-            }
-
-            .hamburger {
-                display: flex;
-            }
-
-            .nav-links {
-                position: absolute;
-                top: 100%;
-                left: 0;
-                right: 0;
-                background: rgba(22, 33, 62, 0.95);
-                backdrop-filter: blur(15px);
-                -webkit-backdrop-filter: blur(15px);
-                flex-direction: column;
-                padding: 20px;
-                gap: 25px;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
-                transition: clip-path 0.4s ease-in-out;
-                visibility: hidden;
-            }
-
-            .nav-links.active {
-                clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
-                visibility: visible;
-            }
-
-            .nav-links a {
-                font-size: 18px;
-            }
-
-            .login-btn {
-                width: 100%;
-            }
-
-            .hamburger.active span:nth-child(1) {
-                transform: translateY(8.5px) rotate(45deg);
-            }
-
-            .hamburger.active span:nth-child(2) {
-                opacity: 0;
-            }
-
-            .hamburger.active span:nth-child(3) {
-                transform: translateY(-8.5px) rotate(-45deg);
-            }
-
-            body {
-                padding-top: 80px;
-            }
-
-            .workspace-grid {
-                grid-template-columns: 1fr;
-            }
-
-            #countdown {
-                font-size: 24px;
-            }
-
-            .overall-score-value {
-                font-size: 36px;
-            }
-        }
-    </style>
+        .nav-links a { font-size: 18px; }
+        .login-btn { width: 100%; }
+        .hamburger.active span:nth-child(1) { transform: translateY(8.5px) rotate(45deg); }
+        .hamburger.active span:nth-child(2) { opacity: 0; }
+        .hamburger.active span:nth-child(3) { transform: translateY(-8.5px) rotate(-45deg); }
+        body { padding-top: 80px; }
+        .workspace-grid { grid-template-columns: 1fr; }
+        #countdown { font-size: 24px; }
+        .overall-score-value { font-size: 36px; }
+    }
+</style>
 </head>
-
 <body>
 
-    <nav class="navbar">
-        <div class="nav-brand">🎙️ Voice & Vision Analyzer</div>
-        <button class="hamburger" id="mobile-menu-btn" aria-label="Toggle navigation">
-            <span></span><span></span><span></span>
+<nav class="navbar">
+    <div class="nav-brand">🎙️ Voice & Vision Analyzer</div>
+    <button class="hamburger" id="mobile-menu-btn" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="nav-links">
+        <a href="#app">Test</a>
+        <a href="#features">Features</a>
+        <a href="#about">About</a>
+        <span id="user-greeting" class="user-greeting">Hello, User!</span>
+        <button id="nav-login-btn" class="login-btn" onclick="openModal('loginModal')">Log In</button>
+    </div>
+</nav>
+
+<div id="notification-zone" class="notification-container"></div>
+
+<div class="modal-overlay" id="loginModal">
+    <div class="modal-box">
+        <h2>Log In / Sign Up</h2>
+        <p>Unlock unlimited practice tests!</p>
+        <div id="login-error"></div>
+        <p style="font-size: 12px; color: #8892b0;">Demo Account: demo@voice.com / demo123</p>
+        <input type="email" id="email" placeholder="Email Address" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button onclick="processLogin()">Secure Login</button>
+        <hr style="border: 0; border-top: 1px solid #2a3b5c; margin: 20px 0;">
+        <button class="google-btn" onclick="googleLogin()">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google Logo" width="18">
+            Sign in with Google
         </button>
-        <div class="nav-links" id="nav-links">
-            <a href="#app">Test</a>
-            <a href="#features">Features</a>
-            <a href="#about">About</a>
-            <span id="user-greeting" class="user-greeting">Hello, User!</span>
-            <button id="nav-login-btn" class="login-btn" onclick="openModal('loginModal')">Log In</button>
-        </div>
-    </nav>
-
-    <div id="notification-zone" class="notification-container"></div>
-
-    <div class="modal-overlay" id="loginModal">
-        <div class="modal-box">
-            <h2>Log In / Sign Up</h2>
-            <p>Unlock unlimited practice tests!</p>
-            <div id="login-error"></div>
-            <p style="font-size: 12px; color: #8892b0;">Demo Account: demo@voice.com / demo123</p>
-            <input type="email" id="email" placeholder="Email Address" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button onclick="processLogin()">Secure Login</button>
-            <hr style="border: 0; border-top: 1px solid #2a3b5c; margin: 20px 0;">
-            <button class="google-btn" onclick="googleLogin()">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google Logo"
-                    width="18">
-                Sign in with Google
-            </button>
-            <button class="close-btn" onclick="closeModal('loginModal')">Cancel</button>
-        </div>
+        <button class="close-btn" onclick="closeModal('loginModal')">Cancel</button>
     </div>
+</div>
 
-    <div class="modal-overlay" id="limitModal">
-        <div class="modal-box">
-            <h2>🎉 Great Job!</h2>
-            <p>You've successfully completed your 3 free trial tests.</p>
-            <p>Log in or sign up now to unlock unlimited access and keep track of your progress.</p>
-            <button onclick="switchToLogin()">Log In to Continue</button>
-            <button class="close-btn" onclick="closeModal('limitModal')">Maybe Later</button>
-        </div>
+<div class="modal-overlay" id="limitModal">
+    <div class="modal-box">
+        <h2>🎉 Great Job!</h2>
+        <p>You've successfully completed your 3 free trial tests.</p>
+        <p>Log in or sign up now to unlock unlimited access and keep track of your progress.</p>
+        <button onclick="switchToLogin()">Log In to Continue</button>
+        <button class="close-btn" onclick="closeModal('limitModal')">Maybe Later</button>
     </div>
+</div>
 
-    <div class="container" id="app">
-        <h1>AI Speech & Engagement Test</h1>
-        <div class="workspace-grid">
-            <div class="card">
-                <h2>Practice Settings</h2>
-                <p>Click Start. You get 10 seconds to read the generated prompt, then audio & vision recorders start
-                    tracking immediately.</p>
-                <div style="display: flex; gap: 10px; margin-top: 15px; align-items: center; flex-wrap: wrap;">
-                    <button id="start-btn" onclick="startTest()">Start Test</button>
-                    <button id="stop-btn" onclick="stopRecording()">⏹ Stop Recording</button>
-                    <span id="test-counter-display" class="test-counter">Tests taken: 0 / 3 (Free)</span>
-                </div>
-                <div id="topic"></div>
-                <div id="countdown"></div>
-                <h2>Live Transcript</h2>
-                <textarea id="transcript" placeholder="Your recorded real-time speech will render here..."></textarea>
+<div class="container" id="app">
+    <h1>AI Speech & Engagement Test</h1>
+    <div class="workspace-grid">
+        <div class="card">
+            <h2>Practice Settings</h2>
+            <p>Click Start. You get 10 seconds to read the generated prompt, then audio & vision recorders start tracking immediately.</p>
+            <div style="display: flex; gap: 10px; margin-top: 15px; align-items: center; flex-wrap: wrap;">
+                <button id="start-btn" onclick="startTest()">Start Test</button>
+                <button id="stop-btn" onclick="stopRecording()">⏹ Stop Recording</button>
+                <span id="test-counter-display" class="test-counter">Tests taken: 0 / 3 (Free)</span>
             </div>
-            <div class="card">
-                <h2>AI Vision Tracking</h2>
-                <p style="margin-bottom: 15px; font-size: 14px; color: #8892b0;">
-                    <em>Keep direct eye contact with your camera to optimize your ML engagement scores.</em>
-                </p>
-                <div class="video-container">
-                    <div class="live-status-pill" id="vision-status-pill">
-                        <div class="pulse-dot"></div>
-                        <span id="vision-status-text">INITIALIZING CAMERA...</span>
-                    </div>
-                    <video id="webcam-view" autoplay playsinline muted></video>
-                    <canvas id="visualizer-canvas"></canvas>
-                </div>
-            </div>
+            <div id="topic"></div>
+            <div id="countdown"></div>
+            <h2>Live Transcript</h2>
+            <textarea id="transcript" placeholder="Your recorded real-time speech will render here..."></textarea>
         </div>
-
-        <div class="card" id="analysis-card">
-            <h2>AI Evaluation Analysis Dashboard</h2>
-            <div class="analysis-grid">
-                <div class="stat-box">
-                    <div class="stat-title">Words Per Minute</div>
-                    <div class="stat-value" id="wpm-result">0</div>
+        <div class="card">
+            <h2>AI Vision Tracking</h2>
+            <p style="margin-bottom: 15px; font-size: 14px; color: #8892b0;">
+                <em>Keep direct eye contact with your camera to optimize your ML engagement scores.</em>
+            </p>
+            <div class="video-container">
+                <div class="live-status-pill" id="vision-status-pill">
+                    <div class="pulse-dot"></div>
+                    <span id="vision-status-text">INITIALIZING CAMERA...</span>
                 </div>
-                <div class="stat-box">
-                    <div class="stat-title">Filler Words Detected</div>
-                    <div class="stat-value" id="filler-result">0</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-title">Eye Contact Consistency</div>
-                    <div class="stat-value" id="eye-contact-result">0%</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-title">Topic Relevance Alignment</div>
-                    <div class="stat-value" id="relevance-result">0%</div>
-                </div>
-            </div>
-            <div class="overall-score-container">
-                <div class="overall-score-title">Overall Combined Performance Score</div>
-                <div class="overall-score-value" id="overall-score-result">0 / 100</div>
+                <video id="webcam-view" autoplay playsinline muted></video>
+                <canvas id="visualizer-canvas"></canvas>
             </div>
         </div>
     </div>
 
-    <div id="features" class="content-section">
-        <h2 style="color: #f7c948;">System Features</h2>
-        <p>Voice Analyzer Pro comprehensively tracks your voice metrics alongside physical engagement indicators using
-            advanced ML frameworks.</p>
+    <div class="card" id="analysis-card">
+        <h2>AI Evaluation Analysis Dashboard</h2>
+        <div class="analysis-grid">
+            <div class="stat-box">
+                <div class="stat-title">Words Per Minute</div>
+                <div class="stat-value" id="wpm-result">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-title">Filler Words Detected</div>
+                <div class="stat-value" id="filler-result">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-title">Eye Contact Consistency</div>
+                <div class="stat-value" id="eye-contact-result">0%</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-title">Topic Relevance Alignment</div>
+                <div class="stat-value" id="relevance-result">0%</div>
+            </div>
+        </div>
+        <div class="overall-score-container">
+            <div class="overall-score-title">Overall Combined Performance Score</div>
+            <div class="overall-score-value" id="overall-score-result">0 / 100</div>
+        </div>
     </div>
-    <div id="about" class="content-section">
-        <h2 style="color: #f7c948;">About Us</h2>
-        <p>Empowering professionals, students, and public speakers globally through state-of-the-art interactive
-            feedback interfaces.</p>
-    </div>
+</div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+<div id="features" class="content-section">
+    <h2 style="color: #f7c948;">System Features</h2>
+    <p>Voice Analyzer Pro comprehensively tracks your voice metrics alongside physical engagement indicators using advanced ML frameworks.</p>
+</div>
+<div id="about" class="content-section">
+    <h2 style="color: #f7c948;">About Us</h2>
+    <p>Empowering professionals, students, and public speakers globally through state-of-the-art interactive feedback interfaces.</p>
+</div>
 
-    <script>
-        // --- System Variables ---
-        let testCount = parseInt(localStorage.getItem('voiceAnalyzer_testCount')) || 0;
-        const MAX_FREE_TESTS = 3;
-        let isLoggedIn = localStorage.getItem('voiceAnalyzer_isLoggedIn') === 'true';
-        let currentRawPromptTopic = "";
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 
-        // --- FIREBASE CONFIGURATION ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyBfmV2Nb3e95DPu_Vy0WyG6Ap5EUGSakVI",
-            authDomain: "voice-analyzer-a1372.firebaseapp.com",
-            projectId: "voice-analyzer-a1372",
-            storageBucket: "voice-analyzer-a1372.firebasestorage.app",
-            messagingSenderId: "523041203860",
-            appId: "1:523041203860:web:4192140676fa4780bdb681",
-            measurementId: "G-SV7ECKCKLC"
+<script>
+    // --- System Variables ---
+    let testCount = parseInt(localStorage.getItem('voiceAnalyzer_testCount')) || 0;
+    const MAX_FREE_TESTS = 3;
+    let isLoggedIn = localStorage.getItem('voiceAnalyzer_isLoggedIn') === 'true'; 
+    let currentRawPromptTopic = "";
+
+    // --- FIREBASE CONFIGURATION ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyBfmV2Nb3e95DPu_Vy0WyG6Ap5EUGSakVI",
+      authDomain: "voice-analyzer-a1372.firebaseapp.com",
+      projectId: "voice-analyzer-a1372",
+      storageBucket: "voice-analyzer-a1372.firebasestorage.app",
+      messagingSenderId: "523041203860",
+      appId: "1:523041203860:web:4192140676fa4780bdb681",
+      measurementId: "G-SV7ECKCKLC"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+
+    // --- ML & Tracking Variables ---
+    let isTrackingActive = false;
+    let isLookingAtCamera = false;
+    let eyeContactChecks = 0;
+    let successfulEyeContacts = 0;
+    let visionInterval;
+    
+    const webcamVideo = document.getElementById('webcam-view');
+    const visualizerCanvas = document.getElementById('visualizer-canvas');
+    const canvasContext = visualizerCanvas.getContext('2d');
+
+    // --- Mobile Menu Interaction ---
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const navLinks = document.getElementById('nav-links');
+
+    mobileMenuBtn.addEventListener('click', () => {
+        mobileMenuBtn.classList.toggle('active');
+        navLinks.classList.toggle('active');
+    });
+
+    document.querySelectorAll('.nav-links a, .login-btn').forEach(link => {
+        link.addEventListener('click', () => {
+            mobileMenuBtn.classList.remove('active');
+            navLinks.classList.remove('active');
+        });
+    });
+
+    // --- Initialize Speech Recognition Core APIs ---
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition;
+    let recordingStartTime;
+    let recordingTimer;
+    
+    let lockedTranscript = ""; 
+    let currentSessionTranscript = "";
+
+    // NEW MOBILE FIX: Safely checks if the mobile browser is repeating a sentence chunk
+    function isDuplicatePhrase(newPhrase, existingText) {
+        let cleanNew = newPhrase.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
+        let cleanExisting = existingText.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
+        
+        if (!cleanNew || !cleanExisting) return false;
+        
+        // Direct exact overlap check
+        if (cleanExisting.endsWith(cleanNew)) return true;
+        
+        // Sliding window lookback check to catch minor variations in mobile stream restarts
+        let trailingContext = cleanExisting.slice(-Math.max(40, cleanNew.length + 15));
+        if (trailingContext.includes(cleanNew)) return true;
+
+        return false;
+    }
+
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        
+        recognition.continuous = true; 
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event) => {
+            let interim = "";
+            let final = "";
+            
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    let textBlock = event.results[i][0].transcript.trim();
+                    
+                    // Filter out mobile duplicate ghosts using the helper function above
+                    let fullCurrentText = lockedTranscript + " " + currentSessionTranscript;
+                    if (!isDuplicatePhrase(textBlock, fullCurrentText)) {
+                        final += textBlock + " ";
+                    } else {
+                        console.log("🔥 AI blocked a ghost sentence repeat: ", textBlock);
+                    }
+                } else {
+                    interim += event.results[i][0].transcript;
+                }
+            }
+            
+            if (final.trim() !== "") {
+                currentSessionTranscript += final;
+            }
+            
+            document.getElementById("transcript").value = (lockedTranscript + currentSessionTranscript + interim).trim();
         };
 
-        firebase.initializeApp(firebaseConfig);
-
-        // --- ML & Tracking Variables ---
-        let isTrackingActive = false;
-        let isLookingAtCamera = false;
-        let mediaRecorder;
-        let audioChunks = [];
-        let eyeContactChecks = 0;
-        let successfulEyeContacts = 0;
-        let visionInterval;
-
-        const webcamVideo = document.getElementById('webcam-view');
-        const visualizerCanvas = document.getElementById('visualizer-canvas');
-        const canvasContext = visualizerCanvas.getContext('2d');
-
-        // --- Mobile Menu Interaction ---
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const navLinks = document.getElementById('nav-links');
-
-        mobileMenuBtn.addEventListener('click', () => {
-            mobileMenuBtn.classList.toggle('active');
-            navLinks.classList.toggle('active');
-        });
-
-        document.querySelectorAll('.nav-links a, .login-btn').forEach(link => {
-            link.addEventListener('click', () => {
-                mobileMenuBtn.classList.remove('active');
-                navLinks.classList.remove('active');
-            });
-        });
-
-
-
-        function triggerNotification(message, type = 'info') {
-            const container = document.getElementById('notification-zone');
-            const toast = document.createElement('div');
-            toast.className = `toast-notification ${type}`;
-
-            let icon = "ℹ️";
-            if (type === 'success') icon = "✅";
-            if (type === 'error') icon = "⚠️";
-
-            toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
-            container.appendChild(toast);
-
-            setTimeout(() => toast.classList.add('show'), 50);
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 400);
-            }, 4000);
-        }
-
-        // --- ML VISION SYSTEM (MediaPipe Eye Tracking) ---
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedUserName = localStorage.getItem('voiceAnalyzer_userName');
-            if (isLoggedIn) {
-                completeLogin(true, savedUserName);
-            } else {
-                document.getElementById("test-counter-display").innerText = `Tests taken: ${testCount} / ${MAX_FREE_TESTS} (Free)`;
+        recognition.onerror = (event) => {
+            console.error("Speech recognition error:", event.error);
+            if (event.error === 'not-allowed') {
+                triggerNotification("Microphone blocked! Please allow mic access in your browser.", "error");
+            } 
+            if (event.error === 'aborted' && isTrackingActive) {
+                console.log("Speech context aborted. Attempting recovery...");
             }
-            initializeVisionSystem();
-        });
+        };
 
-        function initializeVisionSystem() {
-            document.getElementById('vision-status-text').innerText = "LOADING ML MODEL...";
-
-            const faceMesh = new FaceMesh({
-                locateFile: (file) => {
-                    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+        recognition.onend = () => {
+            if (currentSessionTranscript.trim() !== "") {
+                if (!isDuplicatePhrase(currentSessionTranscript, lockedTranscript)) {
+                    lockedTranscript = (lockedTranscript + " " + currentSessionTranscript).trim() + " ";
                 }
-            });
-
-            faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-            faceMesh.onResults(onResults);
-
-            const camera = new Camera(webcamVideo, {
-                onFrame: async () => {
-                    await faceMesh.send({ image: webcamVideo });
-                },
-                width: 640, height: 480
-            });
-
-            camera.start().then(() => {
-                document.getElementById('vision-status-pill').style.backgroundColor = 'rgba(76, 209, 55, 0.85)';
-                document.getElementById('vision-status-text').innerText = "ML TRACKING ACTIVE";
-                triggerNotification("Camera & AI Model connected successfully!", "success");
-                fitCanvasCoordinates();
-                window.addEventListener('resize', fitCanvasCoordinates);
-            }).catch(err => {
-                triggerNotification("Camera blocked. Please grant access.", "error");
-            });
-        }
-
-        function onResults(results) {
-            fitCanvasCoordinates();
-            canvasContext.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
-
-            if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-                const landmarks = results.multiFaceLandmarks[0];
-                const nose = landmarks[1];
-                const leftCheek = landmarks[234];
-                const rightCheek = landmarks[454];
-                const topForehead = landmarks[10];
-                const bottomChin = landmarks[152];
-
-                const faceWidth = Math.abs(rightCheek.x - leftCheek.x);
-                const leftToNose = Math.abs(nose.x - leftCheek.x);
-                const yawRatio = leftToNose / faceWidth;
-
-                const faceHeight = Math.abs(bottomChin.y - topForehead.y);
-                const topToNose = Math.abs(nose.y - topForehead.y);
-                const pitchRatio = topToNose / faceHeight;
-
-                const isLookingForward = (yawRatio > 0.40 && yawRatio < 0.60) && (pitchRatio > 0.40 && pitchRatio < 0.60);
-
-                if (isLookingForward) {
-                    isLookingAtCamera = true;
-                    canvasContext.fillStyle = '#4cd137';
-                    canvasContext.font = "bold 16px Arial";
-                    canvasContext.fillText("🎯 EYE CONTACT MAINTAINED", 20, 30);
-                } else {
-                    isLookingAtCamera = false;
-                    canvasContext.fillStyle = '#f7c948';
-                    canvasContext.font = "bold 16px Arial";
-                    canvasContext.fillText("⚠️ LOOKING AWAY", 20, 30);
-                }
-
-                // Glow tracking circle animation onto canvas layout framework
-                canvasContext.fillStyle = isLookingForward ? '#4cd137' : '#e94560';
-                canvasContext.shadowBlur = 10;
-                canvasContext.shadowColor = isLookingForward ? '#4cd137' : '#e94560';
-                canvasContext.beginPath();
-                canvasContext.arc(nose.x * visualizerCanvas.width, nose.y * visualizerCanvas.height, 5, 0, 2 * Math.PI);
-                canvasContext.fill();
-                canvasContext.shadowBlur = 0;
-            } else {
-                isLookingAtCamera = false;
-                canvasContext.fillStyle = '#e94560';
-                canvasContext.font = "bold 16px Arial";
-                canvasContext.fillText("❌ NO FACE DETECTED", 20, 30);
             }
-        }
-
-        function fitCanvasCoordinates() {
-            visualizerCanvas.width = webcamVideo.offsetWidth;
-            visualizerCanvas.height = webcamVideo.offsetHeight;
-        }
-
-        function openModal(modalId) {
-            const modal = document.getElementById(modalId);
-            modal.style.display = 'flex';
-            setTimeout(() => modal.classList.add('open'), 10);
-        }
-
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            modal.classList.remove('open');
-            setTimeout(() => {
-                modal.style.display = 'none';
-                if (modalId === 'loginModal') { document.getElementById('login-error').style.display = 'none'; }
-            }, 300);
-        }
-
-        function switchToLogin() {
-            closeModal('limitModal');
-            setTimeout(() => openModal('loginModal'), 350);
-        }
-
-        function processLogin() {
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const errorDiv = document.getElementById('login-error');
-
-            if (email === "demo@voice.com" && password === "demo123") {
-                completeLogin(false, "Demo User");
-                triggerNotification("Logged in seamlessly as Demo User.", "success");
-            } else {
-                errorDiv.innerText = "Invalid credentials. Please use demo@voice.com / demo123";
-                errorDiv.style.display = 'block';
-                triggerNotification("Authentication failed.", "error");
-            }
-        }
-
-        function googleLogin() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            firebase.auth().signInWithPopup(provider)
-                .then((result) => {
-                    const user = result.user;
-                    completeLogin(false, user.displayName);
-                    triggerNotification(`Welcome, ${user.displayName}!`, "success");
-                })
-                .catch((error) => {
-                    console.error("Auth Error:", error);
-                    const errorDiv = document.getElementById('login-error');
-                    errorDiv.innerText = "Google Sign-In failed or was cancelled.";
-                    errorDiv.style.display = 'block';
-                    triggerNotification("Authentication failed.", "error");
-                });
-        }
-
-        function completeLogin(isSilentLoad = false, userName = "User") {
-            isLoggedIn = true;
-            localStorage.setItem('voiceAnalyzer_isLoggedIn', 'true');
-            localStorage.setItem('voiceAnalyzer_userName', userName);
-
-            closeModal('loginModal');
-            document.getElementById('nav-login-btn').style.display = 'none';
-
-            const greetingElement = document.getElementById('user-greeting');
-            greetingElement.innerText = `Hello, ${userName}!`;
-            greetingElement.style.display = 'inline-block';
-
-            document.getElementById('test-counter-display').innerText = "Unlimited Tests Unlocked! 🚀";
-            document.getElementById('test-counter-display').style.color = "#4cd137";
-            document.getElementById("start-btn").disabled = false;
-
-            if (!isSilentLoad && typeof triggerNotification === 'function') {
-                triggerNotification("Logged in seamlessly.", "success");
-            }
-        }
-
-        async function fetchLiveTrendingTopic() {
-            document.getElementById("topic").innerText = "Generating live trending topic...";
-
-            const targetRss = "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVd3U00xOWhNutIBR2dCR2V3b0FQAQ?hl=en-US&gl=US&ceid=US:en";
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetRss)}`;
-
-            try {
-                const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error("Network error fetching live feed.");
-
-                const data = await response.json();
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(data.contents, "text/xml");
-                const items = xmlDoc.getElementsByTagName("item");
-
-                if (items.length > 0) {
-                    const randomIndex = Math.floor(Math.random() * Math.min(items.length, 15));
-                    let rawHeadline = items[randomIndex].getElementsByTagName("title")[0].textContent;
-                    let cleanedTopic = rawHeadline.split(" - ")[0];
-                    currentRawPromptTopic = cleanedTopic;
-                    return `Analyze and share your thoughts on this trending global headline: "${cleanedTopic}"`;
-                }
-            } catch (err) {
-                console.error("CORS Feed fallback active:", err);
-            }
-
-            const fallbacks = [
-                "Discuss the global economic shift toward alternative technologies and engineering.",
-                "Analyze the impact of remote collaboration platforms on corporate office cultures.",
-                "What measures should modern smart cities adopt to handle energy storage challenges?"
-            ];
-            const chosenFallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-            currentRawPromptTopic = chosenFallback;
-            return chosenFallback;
-        }
-
-        async function startTest() {
-            if (testCount >= MAX_FREE_TESTS && !isLoggedIn) {
-                openModal('limitModal');
-                triggerNotification("Free tier threshold reached.", "info");
-                return;
-            }
-
-            lockedTranscript = "";
-            currentSessionTranscript = "";
-            document.getElementById("transcript").value = "";
-            document.getElementById("analysis-card").style.display = "none";
-            document.getElementById("start-btn").disabled = true;
-
-            const dynamicTopic = await fetchLiveTrendingTopic();
-            document.getElementById("topic").innerText = dynamicTopic;
-
-            let time = 10;
-            document.getElementById("countdown").innerText = `Starting in ${time}s...`;
-            document.getElementById("countdown").style.color = "#f7c948";
-            triggerNotification("Live topic calculated. Prepare your speech alignment.", "info");
-
-            recordingTimer = setInterval(() => {
-                time--;
-                document.getElementById("countdown").innerText = `Starting in ${time}s...`;
-
-                if (time <= 0) {
-                    clearInterval(recordingTimer);
-                    document.getElementById("countdown").innerText = `🎤 Live Tracking Active...`;
-                    document.getElementById("countdown").style.color = "#e94560";
-
-                    document.getElementById("start-btn").style.display = "none";
-                    document.getElementById("stop-btn").style.display = "block";
-
-                    document.getElementById('vision-status-pill').style.backgroundColor = '#e94560';
-                    document.getElementById('vision-status-text').innerText = "RECORDING AUDIO & VISION";
-
-                    triggerNotification("Recorders initialized. Speak now!", "info");
-
-                    recordingStartTime = Date.now();
-                    isTrackingActive = true;
-
-                    eyeContactChecks = 0;
-                    successfulEyeContacts = 0;
-                    visionInterval = setInterval(() => {
-                        if (isTrackingActive) {
-                            eyeContactChecks++;
-                            if (isLookingAtCamera) successfulEyeContacts++;
-                        }
-                    }, 1000);
-
-                    if (recognition) {
-                        try {
-                            recognition.start();
-                        } catch (e) {
-                            console.error("Failed to start speech engine context:", e);
-                        }
+            currentSessionTranscript = ""; 
+            
+            if (isTrackingActive) {
+                setTimeout(() => {
+                    try {
+                        if (isTrackingActive) recognition.start();
+                    } catch (err) {
+                        console.log("Mic loop safely recovered.");
                     }
-                }
-            }, 1000);
+                }, 300);
+            }
+        };
+    } else {
+        triggerNotification("Speech recognition is unavailable on this browser. Try Google Chrome.", "error");
+    }
+
+    function triggerNotification(message, type = 'info') {
+        const container = document.getElementById('notification-zone');
+        const toast = document.createElement('div');
+        toast.className = `toast-notification ${type}`;
+        
+        let icon = "ℹ️";
+        if (type === 'success') icon = "✅";
+        if (type === 'error') icon = "⚠️";
+        
+        toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+        container.appendChild(toast);
+        
+        setTimeout(() => toast.classList.add('show'), 50);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 400);
+        }, 4000);
+    }
+
+    // --- ML VISION SYSTEM (MediaPipe Eye Tracking) ---
+    window.addEventListener('DOMContentLoaded', () => {
+        const savedUserName = localStorage.getItem('voiceAnalyzer_userName');
+        if (isLoggedIn) {
+            completeLogin(true, savedUserName);
+        } else {
+            document.getElementById("test-counter-display").innerText = `Tests taken: ${testCount} / ${MAX_FREE_TESTS} (Free)`;
         }
+        initializeVisionSystem();
+    });
 
-        function stopRecording() {
-            isTrackingActive = false;
-            clearInterval(visionInterval);
-            if (recognition) {
-                try {
-                    recognition.stop();
-                } catch (e) {
-                    console.log("Speech instance ended gracefully.");
-                }
-            }
+    function initializeVisionSystem() {
+        document.getElementById('vision-status-text').innerText = "LOADING ML MODEL...";
 
-            testCount++;
-            localStorage.setItem('voiceAnalyzer_testCount', testCount);
+        const faceMesh = new FaceMesh({locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+        }});
 
-            if (!isLoggedIn) {
-                document.getElementById("test-counter-display").innerText = `Tests taken: ${testCount} / ${MAX_FREE_TESTS} (Free)`;
-            }
+        faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+        faceMesh.onResults(onResults);
 
-            document.getElementById("countdown").innerText = "✅ Analysis Complete";
-            document.getElementById("countdown").style.color = "#4cd137";
-            document.getElementById("start-btn").style.display = "block";
-            document.getElementById("start-btn").innerText = "Retake Test";
+        const camera = new Camera(webcamVideo, {
+            onFrame: async () => {
+                await faceMesh.send({image: webcamVideo});
+            },
+            width: 640, height: 480
+        });
 
-            document.getElementById("start-btn").disabled = false;
-            document.getElementById("stop-btn").style.display = "none";
-
+        camera.start().then(() => {
             document.getElementById('vision-status-pill').style.backgroundColor = 'rgba(76, 209, 55, 0.85)';
             document.getElementById('vision-status-text').innerText = "ML TRACKING ACTIVE";
+            triggerNotification("Camera & AI Model connected successfully!", "success");
+            fitCanvasCoordinates();
+            window.addEventListener('resize', fitCanvasCoordinates);
+        }).catch(err => {
+            triggerNotification("Camera blocked. Please grant access.", "error");
+        });
+    }
 
-            triggerNotification("Processing structural telemetry results...", "success");
-            analyzeSpeech();
-        }
+    function onResults(results) {
+        fitCanvasCoordinates(); 
+        canvasContext.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
 
-        function calculateTopicRelevance(speechText, topicText) {
-            if (!speechText || !topicText) return 0;
+        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+            const landmarks = results.multiFaceLandmarks[0];
+            const nose = landmarks[1];
+            const leftCheek = landmarks[234];
+            const rightCheek = landmarks[454];
+            const topForehead = landmarks[10];
+            const bottomChin = landmarks[152];
 
-            const cleanAndTokenize = (text) => {
-                const stopWords = new Set([
-                    'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'arent', 'as', 'at',
-                    'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', 'can', 'cant', 'cannot',
-                    'could', 'couldnt', 'did', 'didnt', 'do', 'does', 'doesnt', 'doing', 'dont', 'down', 'during', 'each', 'few',
-                    'for', 'from', 'further', 'had', 'hadnt', 'has', 'hasnt', 'have', 'havent', 'having', 'he', 'hed', 'hell',
-                    'hes', 'her', 'here', 'heres', 'hers', 'herself', 'him', 'himself', 'his', 'how', 'hows', 'i', 'id', 'ill',
-                    'im', 'ive', 'if', 'in', 'into', 'is', 'isnt', 'it', 'its', 'itself', 'lets', 'me', 'more', 'most', 'mustnt',
-                    'my', 'myself', 'no', 'nor', 'not', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours',
-                    'ourselves', 'out', 'over', 'own', 'same', 'shant', 'she', 'shed', 'shell', 'shes', 'should', 'shouldnt',
-                    'so', 'some', 'such', 'than', 'that', 'thats', 'the', 'their', 'theirs', 'them', 'themselves', 'then',
-                    'there', 'theres', 'these', 'they', 'theyd', 'theyll', 'theyre', 'theyve', 'this', 'those', 'through',
-                    'to', 'too', 'under', 'until', 'up', 'very', 'was', 'wasnt', 'we', 'wed', 'well', 'were', 'weve', 'werent',
-                    'what', 'whats', 'when', 'whens', 'where', 'wheres', 'which', 'while', 'who', 'whos', 'whom', 'why', 'whys',
-                    'with', 'wont', 'would', 'wouldnt', 'you', 'youd', 'youll', 'youre', 'youve', 'your', 'yours', 'yourself', 'yourselves',
-                    'discuss', 'analyze', 'share', 'thoughts', 'trending', 'global', 'headline'
-                ]);
+            const faceWidth = Math.abs(rightCheek.x - leftCheek.x);
+            const leftToNose = Math.abs(nose.x - leftCheek.x);
+            const yawRatio = leftToNose / faceWidth; 
 
-                return text.toLowerCase()
-                    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")
-                    .split(/\s+/)
-                    .filter(word => word.length > 2 && !stopWords.has(word));
-            };
+            const faceHeight = Math.abs(bottomChin.y - topForehead.y);
+            const topToNose = Math.abs(nose.y - topForehead.y);
+            const pitchRatio = topToNose / faceHeight; 
 
-            const topicTokens = cleanAndTokenize(topicText);
-            const speechTokens = cleanAndTokenize(speechText);
+            const isLookingForward = (yawRatio > 0.40 && yawRatio < 0.60) && (pitchRatio > 0.40 && pitchRatio < 0.60);
 
-            if (topicTokens.length === 0) return 100;
-            if (speechTokens.length === 0) return 0;
-
-            const uniqueTopicWords = new Set(topicTokens);
-            let matchingMatches = 0;
-
-            uniqueTopicWords.forEach(word => {
-                if (speechTokens.some(speechWord => speechWord.includes(word) || word.includes(speechWord))) {
-                    matchingMatches++;
-                }
-            });
-
-            let densityPercentage = (matchingMatches / uniqueTopicWords.size) * 100;
-
-            if (densityPercentage > 0) {
-                const contextualVolumeBonus = Math.min(25, speechTokens.length * 0.4);
-                densityPercentage += contextualVolumeBonus;
-            }
-
-            return Math.min(100, Math.round(densityPercentage));
-        }
-
-        function analyzeSpeech() {
-            const text = document.getElementById("transcript").value.trim();
-
-            const endTime = Date.now();
-            const durationSeconds = (endTime - recordingStartTime) / 1000;
-            const safeDurationSec = durationSeconds > 1 ? durationSeconds : 1;
-
-            const words = text.split(/\s+/).filter(word => word.length > 0);
-            let wpm = 0;
-            if (words.length > 0) {
-                wpm = Math.round((words.length / safeDurationSec) * 60);
-            }
-
-            const textLower = text.toLowerCase();
-            const fillerList = ['like', 'basically', 'actually', 'so', 'literally', 'ah', 'uh', 'um'];
-            let fillerCount = 0;
-
-            fillerList.forEach(filler => {
-                const regex = new RegExp(`\\b${filler}\\b`, 'g');
-                const matches = textLower.match(regex);
-                if (matches) {
-                    fillerCount += matches.length;
-                }
-            });
-
-            let dynamicEyeScore = 0;
-            if (eyeContactChecks > 0) {
-                dynamicEyeScore = Math.round((successfulEyeContacts / eyeContactChecks) * 100);
-            }
-
-            const relevanceScore = calculateTopicRelevance(text, currentRawPromptTopic);
-
-            let overallScore = 100;
-
-            if (words.length === 0) {
-                overallScore = 0;
+            if (isLookingForward) {
+                isLookingAtCamera = true;
+                canvasContext.fillStyle = '#4cd137';
+                canvasContext.font = "bold 16px Arial";
+                canvasContext.fillText("🎯 EYE CONTACT MAINTAINED", 20, 30);
             } else {
-                overallScore -= (fillerCount * 3);
-
-                if (wpm < 110) {
-                    overallScore -= Math.floor((110 - wpm) * 0.5);
-                } else if (wpm > 170) {
-                    overallScore -= Math.floor((wpm - 170) * 0.5);
-                }
-
-                const eyeScorePenalty = 100 - dynamicEyeScore;
-                overallScore -= Math.floor(eyeScorePenalty * 0.4);
-
-                const relevancePenalty = Math.floor((100 - relevanceScore) * 0.3);
-                overallScore -= relevancePenalty;
+                isLookingAtCamera = false;
+                canvasContext.fillStyle = '#f7c948'; 
+                canvasContext.font = "bold 16px Arial";
+                canvasContext.fillText("⚠️ LOOKING AWAY", 20, 30);
             }
 
-            overallScore = Math.max(0, Math.min(100, overallScore));
-
-            document.getElementById("wpm-result").innerText = wpm;
-            document.getElementById("filler-result").innerText = fillerCount;
-            document.getElementById("eye-contact-result").innerText = `${dynamicEyeScore}%`;
-
-            const relevanceElement = document.getElementById("relevance-result");
-            relevanceElement.innerText = `${relevanceScore}%`;
-            if (relevanceScore >= 60) {
-                relevanceElement.style.color = "#4cd137";
-            } else if (relevanceScore >= 35) {
-                relevanceElement.style.color = "#f7c948";
-            } else {
-                relevanceElement.style.color = "#e94560";
-            }
-
-            document.getElementById("overall-score-result").innerText = `${overallScore} / 100`;
-
-            document.getElementById("analysis-card").style.display = "block";
-            document.getElementById("analysis-card").scrollIntoView({ behavior: 'smooth' });
-
-            triggerNotification("Performance scoreboard generation successful!", "success");
+            // Glow tracking circle animation onto canvas layout framework
+            canvasContext.fillStyle = isLookingForward ? '#4cd137' : '#e94560';
+            canvasContext.shadowBlur = 10;
+            canvasContext.shadowColor = isLookingForward ? '#4cd137' : '#e94560';
+            canvasContext.beginPath();
+            canvasContext.arc(nose.x * visualizerCanvas.width, nose.y * visualizerCanvas.height, 5, 0, 2 * Math.PI);
+            canvasContext.fill();
+            canvasContext.shadowBlur = 0;
+        } else {
+            isLookingAtCamera = false;
+            canvasContext.fillStyle = '#e94560'; 
+            canvasContext.font = "bold 16px Arial";
+            canvasContext.fillText("❌ NO FACE DETECTED", 20, 30);
         }
-    </script>
+    }
+
+    function fitCanvasCoordinates() {
+        visualizerCanvas.width = webcamVideo.offsetWidth;
+        visualizerCanvas.height = webcamVideo.offsetHeight;
+    }
+
+    function openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('open'), 10);
+    }
+    
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.classList.remove('open');
+        setTimeout(() => {
+            modal.style.display = 'none';
+            if (modalId === 'loginModal') { document.getElementById('login-error').style.display = 'none'; }
+        }, 300);
+    }
+
+    function switchToLogin() {
+        closeModal('limitModal');
+        setTimeout(() => openModal('loginModal'), 350);
+    }
+
+    function processLogin() {
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const errorDiv = document.getElementById('login-error');
+
+        if (email === "demo@voice.com" && password === "demo123") {
+            completeLogin(false, "Demo User");
+            triggerNotification("Logged in seamlessly as Demo User.", "success");
+        } else {
+            errorDiv.innerText = "Invalid credentials. Please use demo@voice.com / demo123";
+            errorDiv.style.display = 'block';
+            triggerNotification("Authentication failed.", "error");
+        }
+    }
+
+    function googleLogin() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        firebase.auth().signInWithPopup(provider)
+            .then((result) => {
+                const user = result.user; 
+                completeLogin(false, user.displayName); 
+                triggerNotification(`Welcome, ${user.displayName}!`, "success");
+            })
+            .catch((error) => {
+                console.error("Auth Error:", error);
+                const errorDiv = document.getElementById('login-error');
+                errorDiv.innerText = "Google Sign-In failed or was cancelled.";
+                errorDiv.style.display = 'block';
+                triggerNotification("Authentication failed.", "error");
+            });
+    }
+
+    function completeLogin(isSilentLoad = false, userName = "User") {
+        isLoggedIn = true;
+        localStorage.setItem('voiceAnalyzer_isLoggedIn', 'true'); 
+        localStorage.setItem('voiceAnalyzer_userName', userName); 
+        
+        closeModal('loginModal');
+        document.getElementById('nav-login-btn').style.display = 'none';
+        
+        const greetingElement = document.getElementById('user-greeting');
+        greetingElement.innerText = `Hello, ${userName}!`;
+        greetingElement.style.display = 'inline-block';
+
+        document.getElementById('test-counter-display').innerText = "Unlimited Tests Unlocked! 🚀";
+        document.getElementById('test-counter-display').style.color = "#4cd137";
+        document.getElementById("start-btn").disabled = false;
+
+        if (!isSilentLoad && typeof triggerNotification === 'function') {
+             triggerNotification("Logged in seamlessly.", "success");
+        }
+    }
+
+    async function fetchLiveTrendingTopic() {
+        document.getElementById("topic").innerText = "Generating live trending topic...";
+        
+        const targetRss = "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVd3U00xOWhNutIBR2dCR2V3b0FQAQ?hl=en-US&gl=US&ceid=US:en";
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetRss)}`;
+
+        try {
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error("Network error fetching live feed.");
+            
+            const data = await response.json();
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(data.contents, "text/xml");
+            const items = xmlDoc.getElementsByTagName("item");
+            
+            if (items.length > 0) {
+                const randomIndex = Math.floor(Math.random() * Math.min(items.length, 15));
+                let rawHeadline = items[randomIndex].getElementsByTagName("title")[0].textContent;
+                let cleanedTopic = rawHeadline.split(" - ")[0];
+                currentRawPromptTopic = cleanedTopic;
+                return `Analyze and share your thoughts on this trending global headline: "${cleanedTopic}"`;
+            }
+        } catch (err) {
+            console.error("CORS Feed fallback active:", err);
+        }
+        
+        const fallbacks = [
+            "Discuss the global economic shift toward alternative technologies and engineering.",
+            "Analyze the impact of remote collaboration platforms on corporate office cultures.",
+            "What measures should modern smart cities adopt to handle energy storage challenges?"
+        ];
+        const chosenFallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        currentRawPromptTopic = chosenFallback;
+        return chosenFallback;
+    }
+
+    async function startTest() {
+        if (testCount >= MAX_FREE_TESTS && !isLoggedIn) {
+            openModal('limitModal');
+            triggerNotification("Free tier threshold reached.", "info");
+            return;
+        }
+
+        lockedTranscript = "";
+        currentSessionTranscript = "";
+        document.getElementById("transcript").value = "";
+        document.getElementById("analysis-card").style.display = "none";
+        document.getElementById("start-btn").disabled = true;
+        
+        const dynamicTopic = await fetchLiveTrendingTopic();
+        document.getElementById("topic").innerText = dynamicTopic;
+
+        let time = 10;
+        document.getElementById("countdown").innerText = `Starting in ${time}s...`;
+        document.getElementById("countdown").style.color = "#f7c948";
+        triggerNotification("Live topic calculated. Prepare your speech alignment.", "info");
+
+        recordingTimer = setInterval(() => {
+            time--;
+            document.getElementById("countdown").innerText = `Starting in ${time}s...`;
+
+            if (time <= 0) {
+                clearInterval(recordingTimer);
+                document.getElementById("countdown").innerText = `🎤 Live Tracking Active...`;
+                document.getElementById("countdown").style.color = "#e94560";
+                
+                document.getElementById("start-btn").style.display = "none";
+                document.getElementById("stop-btn").style.display = "block";
+
+                document.getElementById('vision-status-pill').style.backgroundColor = '#e94560';
+                document.getElementById('vision-status-text').innerText = "RECORDING AUDIO & VISION";
+
+                triggerNotification("Recorders initialized. Speak now!", "info");
+
+                recordingStartTime = Date.now();
+                isTrackingActive = true;
+                
+                eyeContactChecks = 0;
+                successfulEyeContacts = 0;
+                visionInterval = setInterval(() => {
+                    if (isTrackingActive) {
+                        eyeContactChecks++;
+                        if (isLookingAtCamera) successfulEyeContacts++;
+                    }
+                }, 1000);
+
+                if (recognition) {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.error("Failed to start speech engine context:", e);
+                    }
+                }
+            }
+        }, 1000);
+    }
+
+    function stopRecording() {
+        isTrackingActive = false;
+        clearInterval(visionInterval);
+        if (recognition) {
+            try {
+                recognition.stop();
+            } catch(e) {
+                console.log("Speech instance ended gracefully.");
+            }
+        }
+        
+        testCount++;
+        localStorage.setItem('voiceAnalyzer_testCount', testCount); 
+        
+        if(!isLoggedIn) {
+            document.getElementById("test-counter-display").innerText = `Tests taken: ${testCount} / ${MAX_FREE_TESTS} (Free)`;
+        }
+
+        document.getElementById("countdown").innerText = "✅ Analysis Complete";
+        document.getElementById("countdown").style.color = "#4cd137";
+        document.getElementById("start-btn").style.display = "block";
+        document.getElementById("start-btn").innerText = "Retake Test";
+        
+        document.getElementById("start-btn").disabled = false; 
+        document.getElementById("stop-btn").style.display = "none";
+
+        document.getElementById('vision-status-pill').style.backgroundColor = 'rgba(76, 209, 55, 0.85)';
+        document.getElementById('vision-status-text').innerText = "ML TRACKING ACTIVE";
+
+        triggerNotification("Processing structural telemetry results...", "success");
+        analyzeSpeech();
+    }
+
+    function calculateTopicRelevance(speechText, topicText) {
+        if (!speechText || !topicText) return 0;
+
+        const cleanAndTokenize = (text) => {
+            const stopWords = new Set([
+                'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'arent', 'as', 'at',
+                'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', 'can', 'cant', 'cannot',
+                'could', 'couldnt', 'did', 'didnt', 'do', 'does', 'doesnt', 'doing', 'dont', 'down', 'during', 'each', 'few',
+                'for', 'from', 'further', 'had', 'hadnt', 'has', 'hasnt', 'have', 'havent', 'having', 'he', 'hed', 'hell',
+                'hes', 'her', 'here', 'heres', 'hers', 'herself', 'him', 'himself', 'his', 'how', 'hows', 'i', 'id', 'ill',
+                'im', 'ive', 'if', 'in', 'into', 'is', 'isnt', 'it', 'its', 'itself', 'lets', 'me', 'more', 'most', 'mustnt',
+                'my', 'myself', 'no', 'nor', 'not', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours',
+                'ourselves', 'out', 'over', 'own', 'same', 'shant', 'she', 'shed', 'shell', 'shes', 'should', 'shouldnt',
+                'so', 'some', 'such', 'than', 'that', 'thats', 'the', 'their', 'theirs', 'them', 'themselves', 'then',
+                'there', 'theres', 'these', 'they', 'theyd', 'theyll', 'theyre', 'theyve', 'this', 'those', 'through',
+                'to', 'too', 'under', 'until', 'up', 'very', 'was', 'wasnt', 'we', 'wed', 'well', 'were', 'weve', 'werent',
+                'what', 'whats', 'when', 'whens', 'where', 'wheres', 'which', 'while', 'who', 'whos', 'whom', 'why', 'whys',
+                'with', 'wont', 'would', 'wouldnt', 'you', 'youd', 'youll', 'youre', 'youve', 'your', 'yours', 'yourself', 'yourselves',
+                'discuss', 'analyze', 'share', 'thoughts', 'trending', 'global', 'headline'
+            ]);
+
+            return text.toLowerCase()
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")
+                .split(/\s+/)
+                .filter(word => word.length > 2 && !stopWords.has(word));
+        };
+
+        const topicTokens = cleanAndTokenize(topicText);
+        const speechTokens = cleanAndTokenize(speechText);
+
+        if (topicTokens.length === 0) return 100; 
+        if (speechTokens.length === 0) return 0;
+
+        const uniqueTopicWords = new Set(topicTokens);
+        let matchingMatches = 0;
+
+        uniqueTopicWords.forEach(word => {
+            if (speechTokens.some(speechWord => speechWord.includes(word) || word.includes(speechWord))) {
+                matchingMatches++;
+            }
+        });
+
+        let densityPercentage = (matchingMatches / uniqueTopicWords.size) * 100;
+
+        if (densityPercentage > 0) {
+            const contextualVolumeBonus = Math.min(25, speechTokens.length * 0.4); 
+            densityPercentage += contextualVolumeBonus;
+        }
+
+        return Math.min(100, Math.round(densityPercentage));
+    }
+
+    function analyzeSpeech() {
+        const text = document.getElementById("transcript").value.trim();
+        
+        const endTime = Date.now();
+        const durationSeconds = (endTime - recordingStartTime) / 1000; 
+        const safeDurationSec = durationSeconds > 1 ? durationSeconds : 1; 
+        
+        const words = text.split(/\s+/).filter(word => word.length > 0);
+        let wpm = 0;
+        if (words.length > 0) {
+            wpm = Math.round((words.length / safeDurationSec) * 60);
+        }
+
+        const textLower = text.toLowerCase();
+        const fillerList = ['like', 'basically', 'actually', 'so', 'literally', 'ah', 'uh', 'um'];
+        let fillerCount = 0;
+        
+        fillerList.forEach(filler => {
+            const regex = new RegExp(`\\b${filler}\\b`, 'g');
+            const matches = textLower.match(regex);
+            if(matches) {
+                fillerCount += matches.length;
+            }
+        });
+
+        let dynamicEyeScore = 0;
+        if (eyeContactChecks > 0) {
+            dynamicEyeScore = Math.round((successfulEyeContacts / eyeContactChecks) * 100);
+        }
+
+        const relevanceScore = calculateTopicRelevance(text, currentRawPromptTopic);
+
+        let overallScore = 100;
+
+        if (words.length === 0) {
+            overallScore = 0;
+        } else {
+            overallScore -= (fillerCount * 3);
+            
+            if (wpm < 110) {
+                overallScore -= Math.floor((110 - wpm) * 0.5);
+            } else if (wpm > 170) {
+                overallScore -= Math.floor((wpm - 170) * 0.5);
+            }
+
+            const eyeScorePenalty = 100 - dynamicEyeScore;
+            overallScore -= Math.floor(eyeScorePenalty * 0.4);
+
+            const relevancePenalty = Math.floor((100 - relevanceScore) * 0.3);
+            overallScore -= relevancePenalty;
+        }
+
+        overallScore = Math.max(0, Math.min(100, overallScore));
+
+        document.getElementById("wpm-result").innerText = wpm;
+        document.getElementById("filler-result").innerText = fillerCount;
+        document.getElementById("eye-contact-result").innerText = `${dynamicEyeScore}%`;
+        
+        const relevanceElement = document.getElementById("relevance-result");
+        relevanceElement.innerText = `${relevanceScore}%`;
+        if (relevanceScore >= 60) {
+            relevanceElement.style.color = "#4cd137"; 
+        } else if (relevanceScore >= 35) {
+            relevanceElement.style.color = "#f7c948"; 
+        } else {
+            relevanceElement.style.color = "#e94560"; 
+        }
+        
+        document.getElementById("overall-score-result").innerText = `${overallScore} / 100`;
+        
+        document.getElementById("analysis-card").style.display = "block";
+        document.getElementById("analysis-card").scrollIntoView({ behavior: 'smooth' });
+        
+        triggerNotification("Performance scoreboard generation successful!", "success");
+    }
+</script>
