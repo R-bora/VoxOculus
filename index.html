@@ -603,21 +603,33 @@
     let recognition;
     let recordingStartTime;
     let recordingTimer;
-    let finalTranscript = ""; // NEW: Global variable to hold finalized text
+    let finalTranscript = ""; 
+
+    // Detect Mobile Device to apply the Android Bugfix
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
-        recognition.continuous = true;
+        
+        // CRITICAL FIX: Turn off continuous on mobile to prevent the buffer duplication bug
+        recognition.continuous = !isMobile; 
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
-        // NEW BUGFIX: Handling interim and final transcripts properly
+        let lastFinalizedText = ""; // Failsafe for Android double-firing
+
         recognition.onresult = (e) => {
             let interimTranscript = "";
             
             for (let i = e.resultIndex; i < e.results.length; i++) {
                 if (e.results[i].isFinal) {
-                    finalTranscript += e.results[i][0].transcript + " ";
+                    let newText = e.results[i][0].transcript.trim();
+                    
+                    // Prevent direct back-to-back exact phrase duplicates
+                    if (newText !== lastFinalizedText && newText !== "") {
+                        finalTranscript += newText + " ";
+                        lastFinalizedText = newText;
+                    }
                 } else {
                     interimTranscript += e.results[i][0].transcript;
                 }
@@ -628,19 +640,21 @@
 
         recognition.onerror = (event) => {
             console.error("Speech recognition error:", event.error);
+            // Ignore 'no-speech' errors as they happen naturally when looping the mic on mobile
             if (event.error === 'not-allowed') {
                 triggerNotification("Microphone blocked! Please allow mic access in your browser.", "error");
-            } else {
-                triggerNotification("Audio error: " + event.error, "error");
+            } else if (event.error !== 'no-speech') {
+                // triggerNotification("Audio error: " + event.error, "error");
             }
         };
 
         recognition.onend = () => {
+            // On mobile, the mic stops when the user pauses. We instantly restart it here.
             if (isTrackingActive) {
                 try {
                     recognition.start();
                 } catch (err) {
-                    console.log("Could not restart recognition automatically.");
+                    console.log("Mic loop restarted.");
                 }
             }
         };
@@ -795,7 +809,6 @@
             return;
         }
 
-        // NEW BUGFIX: Reset the final transcript variable every time a new test starts
         finalTranscript = "";
         document.getElementById("transcript").value = "";
         document.getElementById("analysis-card").style.display = "none";
