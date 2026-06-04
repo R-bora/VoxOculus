@@ -641,6 +641,7 @@
     
     let lockedTranscript = ""; 
     let currentSessionTranscript = "";
+    let lastFinalTranscript = ""; // FIX: Prevent phrase duplicates on mobile engines
 
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
@@ -652,15 +653,25 @@
         recognition.onresult = (event) => {
             let interim = "";
             let final = "";
-            for (let i = 0; i < event.results.length; ++i) {
+            
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
-                    final += event.results[i][0].transcript;
+                    let text = event.results[i][0].transcript.trim();
+                    // FIX: Mobile double-firing filter check
+                    if (text !== lastFinalTranscript) {
+                        final += text + " ";
+                        lastFinalTranscript = text;
+                    }
                 } else {
                     interim += event.results[i][0].transcript;
                 }
             }
-            currentSessionTranscript = final;
-            document.getElementById("transcript").value = lockedTranscript + currentSessionTranscript + interim;
+            
+            if (final.trim() !== "") {
+                currentSessionTranscript += final;
+            }
+            
+            document.getElementById("transcript").value = (lockedTranscript + currentSessionTranscript + interim).trim();
         };
 
         recognition.onerror = (event) => {
@@ -674,10 +685,12 @@
         };
 
         recognition.onend = () => {
+            // FIX: Append safely without repeating text when mobile forcibly drops the mic stream
             if (currentSessionTranscript.trim() !== "") {
-                lockedTranscript += currentSessionTranscript + " ";
+                lockedTranscript = (lockedTranscript + " " + currentSessionTranscript).trim() + " ";
             }
             currentSessionTranscript = ""; 
+            lastFinalTranscript = ""; // Reset for the next phrase cycle
             
             if (isTrackingActive) {
                 setTimeout(() => {
