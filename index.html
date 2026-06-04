@@ -728,15 +728,54 @@
         canvasContext.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
 
         if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-            isLookingAtCamera = true;
-            canvasContext.fillStyle = '#4cd137';
-            canvasContext.font = "bold 16px Arial";
-            canvasContext.fillText("✅ FACE DETECTED", 20, 30);
+            // Get the 468 3D coordinate points of the user's face
+            const landmarks = results.multiFaceLandmarks[0];
+
+            // Extract specific key landmarks
+            const nose = landmarks[1];
+            const leftCheek = landmarks[234];
+            const rightCheek = landmarks[454];
+            const topForehead = landmarks[10];
+            const bottomChin = landmarks[152];
+
+            // 1. Calculate Yaw (Looking Left/Right)
+            const faceWidth = Math.abs(rightCheek.x - leftCheek.x);
+            const leftToNose = Math.abs(nose.x - leftCheek.x);
+            const yawRatio = leftToNose / faceWidth; 
+
+            // 2. Calculate Pitch (Looking Up/Down)
+            const faceHeight = Math.abs(bottomChin.y - topForehead.y);
+            const topToNose = Math.abs(nose.y - topForehead.y);
+            const pitchRatio = topToNose / faceHeight; 
+
+            // 3. Determine if the ratios mean they are looking straight ahead (~0.5 is perfectly straight)
+            // Giving a threshold of 0.40 to 0.60 allows for natural, slight head movements without failing them
+            const isLookingForward = (yawRatio > 0.40 && yawRatio < 0.60) &&
+                                     (pitchRatio > 0.40 && pitchRatio < 0.60);
+
+            if (isLookingForward) {
+                isLookingAtCamera = true;
+                canvasContext.fillStyle = '#4cd137';
+                canvasContext.font = "bold 16px Arial";
+                canvasContext.fillText("🎯 EYE CONTACT MAINTAINED", 20, 30);
+            } else {
+                isLookingAtCamera = false;
+                canvasContext.fillStyle = '#f7c948'; // Warning yellow
+                canvasContext.font = "bold 16px Arial";
+                canvasContext.fillText("⚠️ LOOKING AWAY", 20, 30);
+            }
+
+            // Draw a tiny live-tracking dot on the user's nose for a cool UI effect
+            canvasContext.fillStyle = isLookingForward ? '#4cd137' : '#e94560';
+            canvasContext.beginPath();
+            canvasContext.arc(nose.x * visualizerCanvas.width, nose.y * visualizerCanvas.height, 4, 0, 2 * Math.PI);
+            canvasContext.fill();
+
         } else {
             isLookingAtCamera = false;
-            canvasContext.fillStyle = '#e94560';
+            canvasContext.fillStyle = '#e94560'; // Error red
             canvasContext.font = "bold 16px Arial";
-            canvasContext.fillText("⚠️ USER LOST", 20, 30);
+            canvasContext.fillText("❌ NO FACE DETECTED", 20, 30);
         }
     }
 
