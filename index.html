@@ -76,7 +76,7 @@
         font-weight: bold;
     }
 
-    /* NEW: Hamburger Icon Styling */
+    /* Hamburger Icon Styling */
     .hamburger {
         display: none;
         flex-direction: column;
@@ -557,11 +557,12 @@
 
 <script>
     // --- System Variables ---
-    let testCount = 0;
+    // Pull from localStorage, or default to 0 if it's their first time
+    let testCount = parseInt(localStorage.getItem('voiceAnalyzer_testCount')) || 0;
     const MAX_FREE_TESTS = 3;
-    let isLoggedIn = false;
+    // Remember if they logged in previously
+    let isLoggedIn = localStorage.getItem('voiceAnalyzer_isLoggedIn') === 'true'; 
 
-    // FIX: Added the missing topics array that was causing the ReferenceError
     const topics = [
         "What inspired you to pursue your current career path?",
         "Describe a time you overcame a significant challenge.",
@@ -585,13 +586,11 @@
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const navLinks = document.getElementById('nav-links');
 
-    // Open/Close menu when clicking the hamburger
     mobileMenuBtn.addEventListener('click', () => {
         mobileMenuBtn.classList.toggle('active');
         navLinks.classList.toggle('active');
     });
 
-    // Auto-close menu when a link is clicked
     document.querySelectorAll('.nav-links a, .login-btn').forEach(link => {
         link.addEventListener('click', () => {
             mobileMenuBtn.classList.remove('active');
@@ -604,6 +603,7 @@
     let recognition;
     let recordingStartTime;
     let recordingTimer;
+    let finalTranscript = ""; // NEW: Global variable to hold finalized text
 
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
@@ -611,12 +611,19 @@
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
+        // NEW BUGFIX: Handling interim and final transcripts properly
         recognition.onresult = (e) => {
-            let text = "";
-            for (let i = 0; i < e.results.length; i++) {
-                text += e.results[i][0].transcript + " ";
+            let interimTranscript = "";
+            
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+                if (e.results[i].isFinal) {
+                    finalTranscript += e.results[i][0].transcript + " ";
+                } else {
+                    interimTranscript += e.results[i][0].transcript;
+                }
             }
-            document.getElementById("transcript").value = text;
+            
+            document.getElementById("transcript").value = finalTranscript + interimTranscript;
         };
 
         recognition.onerror = (event) => {
@@ -663,6 +670,13 @@
 
     // --- NEW ML VISION SYSTEM (MediaPipe) ---
     window.addEventListener('DOMContentLoaded', () => {
+        // --- Sync UI with Local Storage Memory on Load ---
+        if (isLoggedIn) {
+            completeLogin(true); // True means "silent login" on refresh
+        } else {
+            document.getElementById("test-counter-display").innerText = `Tests taken: ${testCount} / ${MAX_FREE_TESTS} (Free)`;
+        }
+        
         initializeVisionSystem();
     });
 
@@ -753,8 +767,11 @@
         triggerNotification("Authenticated via Google accounts engine.", "success");
     }
 
-    function completeLogin() {
+    function completeLogin(isSilentLoad = false) {
         isLoggedIn = true;
+        // Save login state to browser memory
+        localStorage.setItem('voiceAnalyzer_isLoggedIn', 'true'); 
+        
         closeModal('loginModal');
         
         document.getElementById('nav-login-btn').style.display = 'none';
@@ -763,6 +780,11 @@
         document.getElementById('test-counter-display').style.color = "#4cd137";
         
         document.getElementById("start-btn").disabled = false;
+
+        // Only trigger the toast notification if it's a manual login, not a page refresh
+        if (!isSilentLoad && typeof triggerNotification === 'function') {
+             triggerNotification("Logged in seamlessly.", "success");
+        }
     }
 
     // --- Recording Session Evaluation Architectures ---
@@ -773,6 +795,8 @@
             return;
         }
 
+        // NEW BUGFIX: Reset the final transcript variable every time a new test starts
+        finalTranscript = "";
         document.getElementById("transcript").value = "";
         document.getElementById("analysis-card").style.display = "none";
         document.getElementById("start-btn").disabled = true;
@@ -822,6 +846,9 @@
         if (recognition) recognition.stop();
         
         testCount++;
+        // Save the new count to the browser's persistent memory
+        localStorage.setItem('voiceAnalyzer_testCount', testCount); 
+        
         if(!isLoggedIn) {
             document.getElementById("test-counter-display").innerText = `Tests taken: ${testCount} / ${MAX_FREE_TESTS} (Free)`;
         }
