@@ -10,9 +10,7 @@
 
 <style>
     /* General Reset */
-    html {
-        scroll-behavior: smooth;
-    }
+    html { scroll-behavior: smooth; }
     body {
         font-family: Arial, sans-serif;
         background: #0b1020;
@@ -21,7 +19,7 @@
         padding-top: 80px;
     }
 
-   /* Fixed Navigation Bar (Upgraded Glassmorphism) */
+   /* Fixed Navigation Bar */
     .navbar {
         position: fixed;
         top: 0; left: 0; right: 0;
@@ -53,9 +51,7 @@
         font-size: 16px;
         transition: color 0.2s;
     }
-    .nav-links a:hover {
-        color: #f7c948;
-    }
+    .nav-links a:hover { color: #f7c948; }
     .login-btn {
         background: transparent;
         border: 2px solid #f7c948;
@@ -133,7 +129,7 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        transform: scaleX(-1); /* Mirror view */
+        transform: scaleX(-1);
     }
     #visualizer-canvas {
         position: absolute;
@@ -185,36 +181,14 @@
         color: #16213e;
         transition: transform 0.1s;
     }
-    button:active {
-        transform: scale(0.98);
-    }
-    button:disabled {
-        background: #555;
-        color: #888;
-        cursor: not-allowed;
-    }
-    #stop-btn {
-        background: #e94560;
-        color: white;
-        display: none; 
-    }
-    .test-counter {
-        font-size: 14px;
-        color: #8892b0;
-        margin-top: 10px;
-    }
+    button:active { transform: scale(0.98); }
+    button:disabled { background: #555; color: #888; cursor: not-allowed; }
+    #stop-btn { background: #e94560; color: white; display: none; }
+    .test-counter { font-size: 14px; color: #8892b0; margin-top: 10px; }
 
     /* Typography & Inputs */
-    #topic {
-        font-size: 22px;
-        color: #f7c948;
-        margin: 20px 0 10px 0;
-    }
-    #countdown {
-        font-size: 32px;
-        font-weight: bold;
-        margin-bottom: 15px;
-    }
+    #topic { font-size: 22px; color: #f7c948; margin: 20px 0 10px 0; }
+    #countdown { font-size: 32px; font-weight: bold; margin-bottom: 15px; }
     textarea {
         width: 100%;
         height: 120px;
@@ -230,10 +204,7 @@
     }
 
     /* Analysis Section */
-    #analysis-card {
-        display: none; 
-        margin-top: 20px;
-    }
+    #analysis-card { display: none; margin-top: 20px; }
     .analysis-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -247,18 +218,8 @@
         border-radius: 12px;
         text-align: center;
     }
-    .stat-title {
-        font-size: 14px;
-        color: #8892b0;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    .stat-value {
-        font-size: 32px;
-        font-weight: bold;
-        color: #f7c948;
-        margin-top: 10px;
-    }
+    .stat-title { font-size: 14px; color: #8892b0; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-value { font-size: 32px; font-weight: bold; color: #f7c948; margin-top: 10px; }
     .overall-score-container {
         margin-top: 25px;
         padding: 25px;
@@ -267,16 +228,8 @@
         text-align: center;
         color: #16213e;
     }
-    .overall-score-title {
-        font-size: 18px;
-        font-weight: bold;
-        text-transform: uppercase;
-    }
-    .overall-score-value {
-        font-size: 48px;
-        font-weight: bold;
-        margin-top: 5px;
-    }
+    .overall-score-title { font-size: 18px; font-weight: bold; text-transform: uppercase; }
+    .overall-score-value { font-size: 48px; font-weight: bold; margin-top: 5px; }
 
     /* Content Sections */
     .content-section {
@@ -350,7 +303,7 @@
         margin-bottom: 10px;
     }
 
-    /* Beautiful Notification Toast Engine System */
+    /* Toast Notification System */
     .notification-container {
         position: fixed;
         bottom: 25px;
@@ -377,34 +330,23 @@
         transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
         opacity: 0;
     }
-    .toast-notification.show {
-        transform: translateX(0);
-        opacity: 1;
-    }
+    .toast-notification.show { transform: translateX(0); opacity: 1; }
     .toast-notification.success { border-left-color: #4cd137; }
     .toast-notification.error { border-left-color: #e94560; }
     .toast-notification.info { border-left-color: #38a1f3; }
 
-   /* RESPONSIVE DESIGN FIXES */
     @media (max-width: 768px) {
         .navbar { padding: 15px 20px; }
         .hamburger { display: flex; }
-        
-        /* Mobile Dropdown Menu */
         .nav-links {
             position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
+            top: 100%; left: 0; right: 0;
             background: rgba(22, 33, 62, 0.95);
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
             flex-direction: column;
-            padding: 20px;
-            gap: 25px;
+            padding: 20px; gap: 25px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
-            
-            /* Slide Animation */
             clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
             transition: clip-path 0.4s ease-in-out;
             visibility: hidden;
@@ -415,12 +357,9 @@
         }
         .nav-links a { font-size: 18px; }
         .login-btn { width: 100%; }
-        
-        /* Hamburger 'X' Animation */
         .hamburger.active span:nth-child(1) { transform: translateY(8.5px) rotate(45deg); }
         .hamburger.active span:nth-child(2) { opacity: 0; }
         .hamburger.active span:nth-child(3) { transform: translateY(-8.5px) rotate(-45deg); }
-
         body { padding-top: 80px; }
         .workspace-grid { grid-template-columns: 1fr; }
         #countdown { font-size: 24px; }
@@ -432,13 +371,9 @@
 
 <nav class="navbar">
     <div class="nav-brand">🎙️ Voice & Vision Analyzer</div>
-    
     <button class="hamburger" id="mobile-menu-btn" aria-label="Toggle navigation">
-        <span></span>
-        <span></span>
-        <span></span>
+        <span></span><span></span><span></span>
     </button>
-    
     <div class="nav-links" id="nav-links">
         <a href="#app">Test</a>
         <a href="#features">Features</a>
@@ -447,28 +382,23 @@
         <button id="nav-login-btn" class="login-btn" onclick="openModal('loginModal')">Log In</button>
     </div>
 </nav>
+
 <div id="notification-zone" class="notification-container"></div>
 
 <div class="modal-overlay" id="loginModal">
     <div class="modal-box">
         <h2>Log In / Sign Up</h2>
         <p>Unlock unlimited practice tests!</p>
-        
         <div id="login-error"></div>
         <p style="font-size: 12px; color: #8892b0;">Demo Account: demo@voice.com / demo123</p>
-        
         <input type="email" id="email" placeholder="Email Address" required>
         <input type="password" id="password" placeholder="Password" required>
-        
         <button onclick="processLogin()">Secure Login</button>
-        
         <hr style="border: 0; border-top: 1px solid #2a3b5c; margin: 20px 0;">
-        
         <button class="google-btn" onclick="googleLogin()">
             <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google Logo" width="18">
             Sign in with Google
         </button>
-        
         <button class="close-btn" onclick="closeModal('loginModal')">Cancel</button>
     </div>
 </div>
@@ -485,31 +415,25 @@
 
 <div class="container" id="app">
     <h1>AI Speech & Engagement Test</h1>
-
     <div class="workspace-grid">
         <div class="card">
             <h2>Practice Settings</h2>
             <p>Click Start. You get 10 seconds to read the generated prompt, then audio & vision recorders start tracking immediately.</p>
-            
             <div style="display: flex; gap: 10px; margin-top: 15px; align-items: center; flex-wrap: wrap;">
                 <button id="start-btn" onclick="startTest()">Start Test</button>
                 <button id="stop-btn" onclick="stopRecording()">⏹ Stop Recording</button>
                 <span id="test-counter-display" class="test-counter">Tests taken: 0 / 3 (Free)</span>
             </div>
-
             <div id="topic"></div>
             <div id="countdown"></div>
-            
             <h2>Live Transcript</h2>
             <textarea id="transcript" placeholder="Your recorded real-time speech will render here..."></textarea>
         </div>
-
         <div class="card">
             <h2>AI Vision Tracking</h2>
             <p style="margin-bottom: 15px; font-size: 14px; color: #8892b0;">
                 <em>Keep direct eye contact with your camera to optimize your ML engagement scores.</em>
             </p>
-            
             <div class="video-container">
                 <div class="live-status-pill" id="vision-status-pill">
                     <div class="pulse-dot"></div>
@@ -537,7 +461,6 @@
                 <div class="stat-value" id="eye-contact-result">0%</div>
             </div>
         </div>
-        
         <div class="overall-score-container">
             <div class="overall-score-title">Overall Combined Performance Score</div>
             <div class="overall-score-value" id="overall-score-result">0 / 100</div>
@@ -549,17 +472,33 @@
     <h2 style="color: #f7c948;">System Features</h2>
     <p>Voice Analyzer Pro comprehensively tracks your voice metrics alongside physical engagement indicators using advanced ML frameworks.</p>
 </div>
-
 <div id="about" class="content-section">
     <h2 style="color: #f7c948;">About Us</h2>
     <p>Empowering professionals, students, and public speakers globally through state-of-the-art interactive feedback interfaces.</p>
 </div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 
 <script>
     // --- System Variables ---
     let testCount = parseInt(localStorage.getItem('voiceAnalyzer_testCount')) || 0;
     const MAX_FREE_TESTS = 3;
     let isLoggedIn = localStorage.getItem('voiceAnalyzer_isLoggedIn') === 'true'; 
+
+    // --- FIREBASE CONFIGURATION ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyBfmV2Nb3e95DPu_Vy0WyG6Ap5EUGSakVI",
+      authDomain: "voice-analyzer-a1372.firebaseapp.com",
+      projectId: "voice-analyzer-a1372",
+      storageBucket: "voice-analyzer-a1372.firebasestorage.app",
+      messagingSenderId: "523041203860",
+      appId: "1:523041203860:web:4192140676fa4780bdb681",
+      measurementId: "G-SV7ECKCKLC"
+    };
+    
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
 
     const topics = [
         "What inspired you to pursue your current career path?",
@@ -602,16 +541,12 @@
     let recordingStartTime;
     let recordingTimer;
     
-    // TWO-VARIABLE LOCK SYSTEM (Fixes Mobile Duplication Bug)
     let lockedTranscript = ""; 
     let currentSessionTranscript = "";
-
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
-        
-        // Turn off continuous on mobile to force clean session breaks
         recognition.continuous = !isMobile; 
         recognition.interimResults = true;
         recognition.lang = 'en-US';
@@ -619,9 +554,6 @@
         recognition.onresult = (event) => {
             let interim = "";
             let final = "";
-            
-            // Rebuild the current session's text from scratch every single time.
-            // This prevents the browser from blindly duplicating old text on mobile.
             for (let i = 0; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
                     final += event.results[i][0].transcript;
@@ -629,11 +561,7 @@
                     interim += event.results[i][0].transcript;
                 }
             }
-            
-            // Lock in the newly corrected, parsed string for this exact session
             currentSessionTranscript = final;
-            
-            // Render: (Past locked sessions) + (Current session confirmed) + (Current guessing)
             document.getElementById("transcript").value = lockedTranscript + currentSessionTranscript + interim;
         };
 
@@ -645,13 +573,10 @@
         };
 
         recognition.onend = () => {
-            // Session over. Move whatever we got into the permanent locked memory.
             if (currentSessionTranscript.trim() !== "") {
                 lockedTranscript += currentSessionTranscript + " ";
             }
-            currentSessionTranscript = ""; // Reset for the next mobile burst session
-            
-            // Seamlessly restart the mic to act like continuous mode on mobile
+            currentSessionTranscript = ""; 
             if (isTrackingActive) {
                 try {
                     recognition.start();
@@ -684,10 +609,12 @@
         }, 4000);
     }
 
-    // --- NEW ML VISION SYSTEM (MediaPipe) ---
+    // --- ML VISION SYSTEM (MediaPipe Eye Tracking) ---
     window.addEventListener('DOMContentLoaded', () => {
+        const savedUserName = localStorage.getItem('voiceAnalyzer_userName');
+
         if (isLoggedIn) {
-            completeLogin(true);
+            completeLogin(true, savedUserName);
         } else {
             document.getElementById("test-counter-display").innerText = `Tests taken: ${testCount} / ${MAX_FREE_TESTS} (Free)`;
         }
@@ -728,30 +655,22 @@
         canvasContext.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
 
         if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-            // Get the 468 3D coordinate points of the user's face
             const landmarks = results.multiFaceLandmarks[0];
-
-            // Extract specific key landmarks
             const nose = landmarks[1];
             const leftCheek = landmarks[234];
             const rightCheek = landmarks[454];
             const topForehead = landmarks[10];
             const bottomChin = landmarks[152];
 
-            // 1. Calculate Yaw (Looking Left/Right)
             const faceWidth = Math.abs(rightCheek.x - leftCheek.x);
             const leftToNose = Math.abs(nose.x - leftCheek.x);
             const yawRatio = leftToNose / faceWidth; 
 
-            // 2. Calculate Pitch (Looking Up/Down)
             const faceHeight = Math.abs(bottomChin.y - topForehead.y);
             const topToNose = Math.abs(nose.y - topForehead.y);
             const pitchRatio = topToNose / faceHeight; 
 
-            // 3. Determine if the ratios mean they are looking straight ahead (~0.5 is perfectly straight)
-            // Giving a threshold of 0.40 to 0.60 allows for natural, slight head movements without failing them
-            const isLookingForward = (yawRatio > 0.40 && yawRatio < 0.60) &&
-                                     (pitchRatio > 0.40 && pitchRatio < 0.60);
+            const isLookingForward = (yawRatio > 0.40 && yawRatio < 0.60) && (pitchRatio > 0.40 && pitchRatio < 0.60);
 
             if (isLookingForward) {
                 isLookingAtCamera = true;
@@ -760,12 +679,11 @@
                 canvasContext.fillText("🎯 EYE CONTACT MAINTAINED", 20, 30);
             } else {
                 isLookingAtCamera = false;
-                canvasContext.fillStyle = '#f7c948'; // Warning yellow
+                canvasContext.fillStyle = '#f7c948'; 
                 canvasContext.font = "bold 16px Arial";
                 canvasContext.fillText("⚠️ LOOKING AWAY", 20, 30);
             }
 
-            // Draw a tiny live-tracking dot on the user's nose for a cool UI effect
             canvasContext.fillStyle = isLookingForward ? '#4cd137' : '#e94560';
             canvasContext.beginPath();
             canvasContext.arc(nose.x * visualizerCanvas.width, nose.y * visualizerCanvas.height, 4, 0, 2 * Math.PI);
@@ -773,7 +691,7 @@
 
         } else {
             isLookingAtCamera = false;
-            canvasContext.fillStyle = '#e94560'; // Error red
+            canvasContext.fillStyle = '#e94560'; 
             canvasContext.font = "bold 16px Arial";
             canvasContext.fillText("❌ NO FACE DETECTED", 20, 30);
         }
@@ -785,15 +703,11 @@
     }
 
     // --- Modal Presentation Architectures ---
-    function openModal(modalId) {
-        document.getElementById(modalId).style.display = 'flex';
-    }
+    function openModal(modalId) { document.getElementById(modalId).style.display = 'flex'; }
     
     function closeModal(modalId) {
         document.getElementById(modalId).style.display = 'none';
-        if (modalId === 'loginModal') {
-            document.getElementById('login-error').style.display = 'none';
-        }
+        if (modalId === 'loginModal') { document.getElementById('login-error').style.display = 'none'; }
     }
 
     function switchToLogin() {
@@ -807,7 +721,7 @@
         const errorDiv = document.getElementById('login-error');
 
         if (email === "demo@voice.com" && password === "demo123") {
-            completeLogin();
+            completeLogin(false, "Demo User");
             triggerNotification("Logged in seamlessly as Demo User.", "success");
         } else {
             errorDiv.innerText = "Invalid credentials. Please use demo@voice.com / demo123";
@@ -816,19 +730,37 @@
         }
     }
 
+    // --- REAL GOOGLE LOGIN TRIGGER ---
     function googleLogin() {
-        completeLogin();
-        triggerNotification("Authenticated via Google accounts engine.", "success");
+        const provider = new firebase.auth.GoogleAuthProvider();
+        
+        firebase.auth().signInWithPopup(provider)
+            .then((result) => {
+                const user = result.user; 
+                completeLogin(false, user.displayName); 
+                triggerNotification(`Welcome, ${user.displayName}!`, "success");
+            })
+            .catch((error) => {
+                console.error("Auth Error:", error);
+                const errorDiv = document.getElementById('login-error');
+                errorDiv.innerText = "Google Sign-In failed or was cancelled.";
+                errorDiv.style.display = 'block';
+            });
     }
 
-    function completeLogin(isSilentLoad = false) {
+    function completeLogin(isSilentLoad = false, userName = "User") {
         isLoggedIn = true;
         localStorage.setItem('voiceAnalyzer_isLoggedIn', 'true'); 
+        localStorage.setItem('voiceAnalyzer_userName', userName); 
         
         closeModal('loginModal');
         
         document.getElementById('nav-login-btn').style.display = 'none';
-        document.getElementById('user-greeting').style.display = 'inline-block';
+        
+        const greetingElement = document.getElementById('user-greeting');
+        greetingElement.innerText = `Hello, ${userName}!`;
+        greetingElement.style.display = 'inline-block';
+
         document.getElementById('test-counter-display').innerText = "Unlimited Tests Unlocked! 🚀";
         document.getElementById('test-counter-display').style.color = "#4cd137";
         
@@ -847,7 +779,6 @@
             return;
         }
 
-        // RESET THE TRANSCRIPT VAULTS FOR THE NEW TEST
         lockedTranscript = "";
         currentSessionTranscript = "";
         document.getElementById("transcript").value = "";
@@ -879,7 +810,6 @@
                 recordingStartTime = Date.now();
                 isTrackingActive = true;
                 
-                // ML Tracker Interval
                 eyeContactChecks = 0;
                 successfulEyeContacts = 0;
                 visionInterval = setInterval(() => {
