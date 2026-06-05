@@ -894,33 +894,19 @@
             recognition.interimResults = false;
             recognition.lang = 'en-US';
 
-            recognition.onresult = (event) => {
-                let interim = "";
-                let final = "";
+           recognition.onresult = (event) => {
+    console.log("VOICE DETECTED");
 
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        let textBlock = event.results[i][0].transcript.trim();
+    let transcript = "";
 
-                        // Filter out mobile duplicate ghosts using the helper function above
-                        let fullCurrentText = lockedTranscript + " " + currentSessionTranscript;
-                        if (!isDuplicatePhrase(textBlock, fullCurrentText)) {
-                            final += textBlock + " ";
-                        } else {
-                            console.log("🔥 AI blocked a ghost sentence repeat: ", textBlock);
-                        }
-                    } else {
-                        interim += event.results[i][0].transcript;
-                    }
-                }
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+    }
 
-                if (final.trim() !== "") {
-                    currentSessionTranscript += final;
-                }
+    console.log(transcript);
 
-                document.getElementById("transcript").value = (lockedTranscript + currentSessionTranscript + interim).trim();
-            };
-
+    document.getElementById("transcript").value = transcript;
+};
             recognition.onerror = (event) => {
                 console.error("Speech recognition error:", event.error);
                 if (event.error === 'not-allowed') {
