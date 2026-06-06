@@ -1,533 +1,71 @@
-<!DOCTYPE html>
-<html lang="en">
+const express = require('express');
+const { Server } = require('ws');
+const WebSocket = require('ws'); 
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice & Vision Analyzer Pro</title>
+const app = express();
+const server = app.listen(3000, () => console.log('🚀 Server running on http://localhost:3000'));
+const wss = new Server({ server });
 
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+wss.on('connection', (ws) => {
+  console.log('Client connected for live streaming...');
 
-    <style>
-        /* General Reset & Background */
-        html { scroll-behavior: smooth; }
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #0b1020 0%, #111a36 100%);
-            color: white;
-            margin: 0;
-            padding-top: 80px;
-            overflow-x: hidden;
-        }
-
-        /* Fixed Navigation Bar */
-        .navbar {
-            position: fixed; top: 0; left: 0; right: 0;
-            background: rgba(22, 33, 62, 0.95);
-            backdrop-filter: blur(12px);
-            padding: 15px 30px; display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); z-index: 1000;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            box-sizing: border-box;
-        }
-        .nav-brand { font-size: 20px; font-weight: bold; color: #f7c948; white-space: nowrap; transition: transform 0.3s; }
-        .nav-brand:hover { transform: scale(1.03); }
-        .nav-links { display: flex; align-items: center; gap: 20px; }
-        .nav-links a { color: white; text-decoration: none; font-size: 16px; position: relative; transition: color 0.3s; }
-        .nav-links a:hover { color: #f7c948; }
-        
-        .login-btn {
-            background: transparent; border: 2px solid #f7c948; color: #f7c948;
-            padding: 8px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.4s;
-        }
-        .login-btn:hover { background: #f7c948; color: #16213e; box-shadow: 0 0 15px rgba(247, 201, 72, 0.4); }
-        .user-greeting { display: none; color: #4cd137; font-weight: bold; }
-
-        /* Responsive Mobile Hamburger Menu */
-        .hamburger {
-            display: none; flex-direction: column; justify-content: space-between;
-            width: 28px; height: 20px; background: transparent; border: none; cursor: pointer; padding: 0; z-index: 1001;
-        }
-        .hamburger span { width: 100%; height: 3px; background-color: #f7c948; border-radius: 5px; transition: all 0.3s; }
-
-        /* Mobile Navbar Layout Updates */
-        @media (max-width: 768px) {
-            .hamburger { display: flex; }
-            .nav-links {
-                display: none;
-                flex-direction: column;
-                position: absolute;
-                top: 100%; left: 0; right: 0;
-                background: #16213e;
-                padding: 20px;
-                gap: 20px;
-                box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-                border-bottom: 2px solid #2a3b5c;
-            }
-            .nav-links.active { display: flex; }
-        }
-
-        /* Workspace & Structure Containers */
-        .container { max-width: 1000px; margin: auto; padding: 20px; min-height: 80vh; }
-        .workspace-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 20px; margin-top: 20px; }
-
-        .card {
-            background: #16213e; padding: 25px; border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); height: fit-content; transition: transform 0.4s, box-shadow 0.4s;
-        }
-
-        /* Video Container Mirror Setup */
-        .video-container {
-            position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #000; aspect-ratio: 4 / 3;
-            transform: scaleX(-1); /* Mirrors both canvas overlay and video frame fluidly together */
-        }
-        #webcam-view { width: 100%; height: 100%; object-fit: cover; }
-        #visualizer-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
-
-        /* UI elements matching standard styling layout */
-        .live-status-pill {
-            position: absolute; top: 15px; right: 15px; background: rgba(233, 69, 96, 0.85); color: white;
-            padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; z-index: 10;
-            display: flex; align-items: center; gap: 6px; transform: scaleX(-1); /* Keeps status text un-reversed */
-        }
-        .live-status-pill .pulse-dot { width: 8px; height: 8px; background-color: #fff; border-radius: 50%; animation: pulse 1.5s infinite; }
-
-        @keyframes pulse { 0% { transform: scale(0.8); opacity: 0.3; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(0.8); opacity: 0.3; } }
-        #stop-btn { background: #e94560; color: white; display: none; }
-        button { background: #f7c948; border: none; padding: 12px 22px; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; color: #16213e; }
-        button:disabled { background: #555; color: #888; cursor: not-allowed; }
-        
-        .test-counter { font-size: 14px; color: #8892b0; margin-top: 10px; }
-        #topic { font-size: 22px; color: #f7c948; margin: 20px 0 10px 0; }
-        #countdown { font-size: 32px; font-weight: bold; margin-bottom: 15px; }
-        textarea { width: 100%; height: 120px; margin-top: 15px; background: #0b1020; color: white; border: 1px solid #2a3b5c; border-radius: 8px; padding: 15px; font-size: 16px; box-sizing: border-box; resize: vertical; }
-
-        #analysis-card { display: none; margin-top: 20px; }
-        .analysis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
-        .stat-box { background: #0b1020; border: 1px solid #2a3b5c; padding: 20px; border-radius: 12px; text-align: center; }
-        .stat-title { font-size: 14px; color: #8892b0; text-transform: uppercase; }
-        .stat-value { font-size: 32px; font-weight: bold; color: #f7c948; margin-top: 10px; }
-        .overall-score-container { margin-top: 25px; padding: 25px; background: linear-gradient(135deg, #f7c948 0%, #f9a826 100%); border-radius: 12px; text-align: center; color: #16213e; }
-        .overall-score-value { font-size: 48px; font-weight: bold; margin-top: 5px; }
-
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
-        .modal-box { background: #16213e; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; }
-        .modal-box input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #2a3b5c; background: #0b1020; color: white; box-sizing: border-box; }
-        .close-btn { background: transparent; color: #8892b0; margin-top: 15px; padding: 0; font-size: 14px; }
-
-        .notification-container { position: fixed; bottom: 25px; right: 25px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        .toast-notification { background: #16213e; border-left: 4px solid #f7c948; color: white; padding: 15px 25px; border-radius: 8px; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-    </style>
-</head>
-
-<body>
-
-    <nav class="navbar">
-        <div class="nav-brand">🎙️ Voice & Vision Analyzer</div>
-        <button class="hamburger" id="mobile-menu-btn" onclick="toggleMobileMenu()">
-            <span></span><span></span><span></span>
-        </button>
-        <div class="nav-links" id="nav-links">
-            <a href="#app" onclick="toggleMobileMenu()">Test</a>
-            <span id="user-greeting" class="user-greeting">Hello, User!</span>
-            <button id="nav-login-btn" class="login-btn" onclick="openModal('loginModal')">Log In</button>
-        </div>
-    </nav>
-
-    <div id="notification-zone" class="notification-container"></div>
-
-    <div class="modal-overlay" id="loginModal">
-        <div class="modal-box">
-            <h2>Log In</h2>
-            <p style="font-size: 12px; color: #8892b0;">Demo Account: demo@voice.com / demo123</p>
-            <input type="email" id="email" placeholder="Email Address">
-            <input type="password" id="password" placeholder="Password">
-            <button onclick="processLogin()">Secure Login</button>
-            <button class="close-btn" onclick="closeModal('loginModal')">Cancel</button>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="limitModal">
-        <div class="modal-box">
-            <h2>🎉 Great Job!</h2>
-            <p>You've successfully completed your 3 free trial tests. Log in to unlock unlimited access.</p>
-            <button onclick="switchToLogin()">Log In to Continue</button>
-            <button class="close-btn" onclick="closeModal('limitModal')">Maybe Later</button>
-        </div>
-    </div>
-
-    <div class="container" id="app">
-        <h1>AI Speech & Engagement Test</h1>
-        <div class="workspace-grid">
-            <div class="card">
-                <h2>Practice Settings</h2>
-                <p>Click Start. You get 10 seconds to read the generated prompt before tracking starts.</p>
-                <div style="display: flex; gap: 10px; margin-top: 15px; align-items: center; flex-wrap: wrap;">
-                    <button id="start-btn" onclick="startTest()">Start Test</button>
-                    <button id="stop-btn" onclick="stopRecording()">⏹ Stop Recording</button>
-                    <span id="test-counter-display" class="test-counter">Tests taken: 0 / 3 (Free)</span>
-                </div>
-                <div id="topic"></div>
-                <div id="countdown"></div>
-                <h2>Live Transcript (Google Cloud API)</h2>
-                <textarea id="transcript" placeholder="Your recorded real-time speech will render here..." readonly></textarea>
-            </div>
-            <div class="card">
-                <h2>AI Vision Tracking</h2>
-                <div class="video-container">
-                    <div class="live-status-pill" id="vision-status-pill">
-                        <div class="pulse-dot"></div>
-                        <span id="vision-status-text">INITIALIZING CAMERA...</span>
-                    </div>
-                    <video id="webcam-view" autoplay playsinline muted></video>
-                    <canvas id="visualizer-canvas"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" id="analysis-card">
-            <h2>AI Evaluation Analysis Dashboard</h2>
-            <div class="analysis-grid">
-                <div class="stat-box">
-                    <div class="stat-title">Words Per Minute</div>
-                    <div class="stat-value" id="wpm-result">0</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-title">Filler Words Detected</div>
-                    <div class="stat-value" id="filler-result">0</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-title">Eye Contact Consistency</div>
-                    <div class="stat-value" id="eye-contact-result">0%</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-title">Topic Relevance Alignment</div>
-                    <div class="stat-value" id="relevance-result">0%</div>
-                </div>
-            </div>
-            <div class="overall-score-container">
-                <div class="overall-score-title">Overall Combined Performance Score</div>
-                <div class="overall-score-value" id="overall-score-result">0 / 100</div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // --- System Variables ---
-        let testCount = parseInt(localStorage.getItem('voiceAnalyzer_testCount')) || 0;
-        const MAX_FREE_TESTS = 3;
-        let isLoggedIn = localStorage.getItem('voiceAnalyzer_isLoggedIn') === 'true';
-        let currentRawPromptTopic = "";
-
-        // --- Google Cloud Streaming Variables ---
-        let socket;
-        let localStream;
-        let mediaRecorder;
-        let finalizedText = ""; 
-        let recordingStartTime;
-        let recordingTimer;
-
-        // --- ML & Tracking Variables ---
-        let isTrackingActive = false;
-        let isLookingAtCamera = false;
-        let eyeContactChecks = 0;
-        let successfulEyeContacts = 0;
-        let visionInterval;
-        const webcamVideo = document.getElementById('webcam-view');
-        const visualizerCanvas = document.getElementById('visualizer-canvas');
-        const canvasContext = visualizerCanvas.getContext('2d');
-
-        function toggleMobileMenu() {
-            const links = document.getElementById('nav-links');
-            links.classList.toggle('active');
-        }
-
-        function triggerNotification(message, type = 'info') {
-            const container = document.getElementById('notification-zone');
-            const toast = document.createElement('div');
-            toast.className = `toast-notification ${type}`;
-            let icon = type === 'success' ? "✅" : (type === 'error' ? "⚠️" : "ℹ️");
-            toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 4000);
-        }
-
-        function openModal(modalId) {
-            document.getElementById(modalId).style.display = 'flex';
-        }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-        }
-
-        function switchToLogin() {
-            closeModal('limitModal');
-            openModal('loginModal');
-        }
-
-        function processLogin() {
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            if (email === "demo@voice.com" && password === "demo123") {
-                isLoggedIn = true;
-                localStorage.setItem('voiceAnalyzer_isLoggedIn', 'true');
-                closeModal('loginModal');
-                document.getElementById('nav-login-btn').style.display = 'none';
-                document.getElementById('user-greeting').style.display = 'inline-block';
-                document.getElementById('test-counter-display').innerText = "Unlimited Tests Unlocked! 🚀";
-                document.getElementById('test-counter-display').style.color = "#4cd137";
-                triggerNotification("Logged in seamlessly as Demo User.", "success");
-            } else {
-                triggerNotification("Invalid credentials. Use demo@voice.com", "error");
-            }
-        }
-
-        function fetchLiveTrendingTopic() {
-            const topics = [
-                "Discuss the global economic shift toward alternative clean technologies.",
-                "Analyze the impact of remote collaboration platforms on corporate cultures.",
-                "What measures should modern smart cities adopt to handle energy challenges?",
-                "Share your thoughts on the rapid evolution of artificial intelligence in healthcare.",
-                "Discuss the implications of commercial space travel on global economics.",
-                "Analyze the role of cybersecurity in an increasingly interconnected world."
-            ];
-            const chosenTopic = topics[Math.floor(Math.random() * topics.length)];
-            currentRawPromptTopic = chosenTopic;
-            return chosenTopic;
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            if (isLoggedIn) {
-                document.getElementById('nav-login-btn').style.display = 'none';
-                document.getElementById('user-greeting').style.display = 'inline-block';
-                document.getElementById('test-counter-display').innerText = "Unlimited Tests Unlocked! 🚀";
-            } else {
-                document.getElementById("test-counter-display").innerText = `Tests taken: ${testCount} / ${MAX_FREE_TESTS} (Free)`;
-            }
-            initializeVisionSystem();
-        });
-
-        function initializeVisionSystem() {
-            const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
-            faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-            faceMesh.onResults(onResults);
-
-            // Added ideal mobile constraints configuration safely inside initialization helper
-            const camera = new Camera(webcamVideo, {
-                onFrame: async () => { await faceMesh.send({ image: webcamVideo }); },
-                width: { ideal: 640 },
-                height: { ideal: 480 },
-                facingMode: 'user'
-            });
-
-            camera.start().then(() => {
-                document.getElementById('vision-status-pill').style.backgroundColor = 'rgba(76, 209, 55, 0.85)';
-                document.getElementById('vision-status-text').innerText = "ML TRACKING ACTIVE";
-                fitCanvasCoordinates();
-                window.addEventListener('resize', fitCanvasCoordinates);
-            }).catch((err) => {
-                console.error(err);
-                triggerNotification("Camera blocked or unavailable.", "error");
-            });
-        }
-
-        function onResults(results) {
-            fitCanvasCoordinates();
-            canvasContext.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
-            if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-                const landmarks = results.multiFaceLandmarks[0];
-                const nose = landmarks[1];
-                const leftCheek = landmarks[234];
-                const rightCheek = landmarks[454];
-                const topForehead = landmarks[10];
-                const bottomChin = landmarks[152];
-
-                const faceWidth = Math.abs(rightCheek.x - leftCheek.x);
-                const leftToNose = Math.abs(nose.x - leftCheek.x);
-                const yawRatio = leftToNose / faceWidth;
-                const faceHeight = Math.abs(bottomChin.y - topForehead.y);
-                const topToNose = Math.abs(nose.y - topForehead.y);
-                const pitchRatio = topToNose / faceHeight;
-
-                const isLookingForward = (yawRatio > 0.38 && yawRatio < 0.62) && (pitchRatio > 0.38 && pitchRatio < 0.62);
-                isLookingAtCamera = isLookingForward;
-
-                canvasContext.fillStyle = isLookingForward ? '#4cd137' : '#f7c948';
-                canvasContext.font = "bold 16px Arial";
-                
-                // Text stays legible because scale values map cleanly within the video wrapper container limits
-                canvasContext.fillText(isLookingForward ? "🎯 EYE CONTACT" : "⚠️ LOOKING AWAY", 20, 30);
-
-                canvasContext.beginPath();
-                canvasContext.arc(nose.x * visualizerCanvas.width, nose.y * visualizerCanvas.height, 6, 0, 2 * Math.PI);
-                canvasContext.fill();
-            } else {
-                isLookingAtCamera = false;
-                canvasContext.fillStyle = '#e94560';
-                canvasContext.font = "bold 16px Arial";
-                canvasContext.fillText("❌ NO FACE DETECTED", 20, 30);
-            }
-        }
-
-        function fitCanvasCoordinates() {
-            visualizerCanvas.width = webcamVideo.clientWidth;
-            visualizerCanvas.height = webcamVideo.clientHeight;
-        }
-
-        async function startGoogleStreaming() {
-    finalizedText = "";
-    document.getElementById("transcript").value = "";
-
-    try {
-        // 1. Establish connection first
-        socket = new WebSocket('https://voxoculus.onrender.com');
-        
-        // 2. Wait until the WebSocket is fully OPEN before firing up the recorder
-        socket.onopen = async () => {
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(localStream, { mimeType: 'audio/webm;codecs=opus' });
-                
-                mediaRecorder.ondataavailable = (event) => {
-                    // This now guarantees the container header chunk is safely delivered
-                    if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
-                        socket.send(event.data);
-                    }
-                };
-                
-                mediaRecorder.start(250); 
-                console.log("🎙️ Microphone streaming safely initialized.");
-            } catch (micErr) {
-                console.error(micErr);
-                triggerNotification("Microphone access denied or unavailable.", "error");
-            }
-        };
-
-        socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            
-            // Catch forwarded backend/Google API errors inside the UI
-            if (data.error) {
-                triggerNotification("Google API Error: " + data.error, "error");
-                return;
-            }
-
-            if (data.isFinal) {
-                finalizedText += data.transcript + " ";
-                document.getElementById("transcript").value = finalizedText;
-            } else {
-                document.getElementById("transcript").value = finalizedText + data.transcript;
-            }
-        };
-
-        socket.onerror = () => triggerNotification("Backend server connection failed.", "error");
-        
-    } catch (err) {
-        console.error(err);
-        triggerNotification("Failed to start audio connection setup stream.", "error");
+  // 1. Connect to Deepgram immediately so it is ready in time
+  const deepgramStream = new WebSocket('wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&interim_results=true', {
+    headers: {
+      Authorization: 'Token 98bceafab648036bbd8f140f3f9fefe9be1a8f12'
     }
-}
-       
-async function startTest() {
-            if (testCount >= MAX_FREE_TESTS && !isLoggedIn) {
-                openModal('limitModal');
-                return;
-            }
+  });
 
-            document.getElementById("analysis-card").style.display = "none";
-            document.getElementById("start-btn").disabled = true;
+  // Temporary storage to hold the first audio chunks while connecting
+  let audioQueue = [];
 
-            const dynamicTopic = fetchLiveTrendingTopic();
-            document.getElementById("topic").innerText = dynamicTopic;
+  deepgramStream.on('open', () => {
+    console.log('⚡ Connected to Deepgram API successfully!');
+    // Flush any chunks we saved while waiting
+    while (audioQueue.length > 0) {
+      const chunk = audioQueue.shift();
+      deepgramStream.send(chunk);
+    }
+  });
 
-            let time = 10;
-            document.getElementById("countdown").innerText = `Starting in ${time}s...`;
+  deepgramStream.on('message', (data) => {
+    try {
+      const response = JSON.parse(data.toString());
+      const transcript = response.channel?.alternatives[0]?.transcript || '';
+      const isFinal = response.is_final || false;
 
-            // 1. START CONNECTION IMMEDIATELY HERE (Pre-warming in the background) 🚀
-            startGoogleStreaming();
+      if (transcript) {
+        // 📋 This will print the text live directly into your Render logs!
+        console.log(`📝 Live Transcript: ${transcript}`);
+        
+        // Send the transcript back to your HTML frontend
+        ws.send(JSON.stringify({ transcript, isFinal }));
+      }
+    } catch (err) {
+      console.error('Error parsing Deepgram message:', err);
+    }
+  });
 
-            recordingTimer = setInterval(() => {
-                time--;
-                document.getElementById("countdown").innerText = `Starting in ${time}s...`;
+  deepgramStream.on('error', (err) => {
+    console.error('Deepgram API Error:', err);
+  });
 
-                if (time <= 0) {
-                    clearInterval(recordingTimer);
-                    document.getElementById("countdown").innerText = `🎤 Live Tracking Active...`;
+  ws.on('message', (message) => {
+    if (Buffer.isBuffer(message)) {
+      if (deepgramStream.readyState === WebSocket.OPEN) {
+        // If connection is fully open, send audio directly
+        deepgramStream.send(message);
+      } else if (deepgramStream.readyState === WebSocket.CONNECTING) {
+        // Queue the vital early audio chunks so we don't lose the format headers
+        audioQueue.push(message);
+      }
+    }
+  });
 
-                    document.getElementById("start-btn").style.display = "none";
-                    document.getElementById("stop-btn").style.display = "block";
-
-                    recordingStartTime = Date.now();
-                    isTrackingActive = true;
-                    eyeContactChecks = 0;
-                    successfulEyeContacts = 0;
-
-                    visionInterval = setInterval(() => {
-                        if (isTrackingActive) {
-                            eyeContactChecks++;
-                            if (isLookingAtCamera) successfulEyeContacts++;
-                        }
-                    }, 1000);
-                    
-                    // (Old location of startGoogleStreaming was removed from here)
-                }
-            }, 1000);
-        }
-
-              function stopRecording() {
-            isTrackingActive = false;
-            clearInterval(visionInterval);
-            
-            if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
-            if (localStream) localStream.getTracks().forEach(track => track.stop());
-            if (socket) socket.close();
-
-            testCount++;
-            localStorage.setItem('voiceAnalyzer_testCount', testCount);
-            if (!isLoggedIn) document.getElementById("test-counter-display").innerText = `Tests taken: ${testCount} / ${MAX_FREE_TESTS} (Free)`;
-
-            document.getElementById("countdown").innerText = "✅ Analysis Complete";
-            document.getElementById("start-btn").style.display = "block";
-            document.getElementById("start-btn").innerText = "Retake Test";
-            document.getElementById("start-btn").disabled = false;
-            document.getElementById("stop-btn").style.display = "none";
-
-            analyzeSpeech();
-        }
-
-        function analyzeSpeech() {
-            const text = document.getElementById("transcript").value.trim();
-            const durationSeconds = Math.max((Date.now() - recordingStartTime) / 1000, 1);
-            const words = text.split(/\s+/).filter(word => word.length > 0);
-            
-            let wpm = words.length > 0 ? Math.round((words.length / durationSeconds) * 60) : 0;
-            
-            const textLower = text.toLowerCase();
-            const fillerList = ['like', 'basically', 'actually', 'so', 'literally', 'ah', 'uh', 'um'];
-            let fillerCount = 0;
-            fillerList.forEach(filler => {
-                const matches = textLower.match(new RegExp(`\\b${filler}\\b`, 'g'));
-                if (matches) fillerCount += matches.length;
-            });
-
-            let dynamicEyeScore = eyeContactChecks > 0 ? Math.round((successfulEyeContacts / eyeContactChecks) * 100) : 0;
-
-            let overallScore = words.length === 0 ? 0 : 100 - (fillerCount * 3);
-            if (wpm < 110) overallScore -= Math.floor((110 - wpm) * 0.5);
-            else if (wpm > 170) overallScore -= Math.floor((wpm - 170) * 0.5);
-            overallScore -= Math.floor((100 - dynamicEyeScore) * 0.4);
-            overallScore = Math.max(0, Math.min(100, overallScore));
-
-            document.getElementById("wpm-result").innerText = wpm;
-            document.getElementById("filler-result").innerText = fillerCount;
-            document.getElementById("eye-contact-result").innerText = `${dynamicEyeScore}%`;
-            document.getElementById("relevance-result").innerText = "Auto-Scored";
-            document.getElementById("overall-score-result").innerText = `${overallScore} / 100`;
-
-            document.getElementById("analysis-card").style.display = "block";
-            document.getElementById("analysis-card").scrollIntoView({ behavior: 'smooth' });
-        }
-    </script>
-</body>
-</html>
+  ws.on('close', () => {
+    console.log('Client disconnected.');
+    if (deepgramStream.readyState === WebSocket.OPEN || deepgramStream.readyState === WebSocket.CONNECTING) {
+      deepgramStream.close();
+    }
+  });
+});
