@@ -376,40 +376,59 @@
         }
 
         async function startGoogleStreaming() {
-            finalizedText = "";
-            document.getElementById("transcript").value = "";
+    finalizedText = "";
+    document.getElementById("transcript").value = "";
 
+    try {
+        // 1. Establish connection first
+        socket = new WebSocket('ws://' + window.location.hostname + ':3000');
+        
+        // 2. Wait until the WebSocket is fully OPEN before firing up the recorder
+        socket.onopen = async () => {
             try {
-                socket = new WebSocket('ws://' + window.location.hostname + ':3000');
-                
-                socket.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-                    if (data.isFinal) {
-                        finalizedText += data.transcript + " ";
-                        document.getElementById("transcript").value = finalizedText;
-                    } else {
-                        document.getElementById("transcript").value = finalizedText + data.transcript;
-                    }
-                };
-
-                socket.onerror = () => triggerNotification("Backend server connection failed.", "error");
-
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(localStream, { mimeType: 'audio/webm;codecs=opus' });
                 
                 mediaRecorder.ondataavailable = (event) => {
+                    // This now guarantees the container header chunk is safely delivered
                     if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
                         socket.send(event.data);
                     }
                 };
                 
                 mediaRecorder.start(250); 
-            } catch (err) {
-                console.error(err);
-                triggerNotification("Failed to start audio connection setup stream.", "error");
+                console.log("🎙️ Microphone streaming safely initialized.");
+            } catch (micErr) {
+                console.error(micErr);
+                triggerNotification("Microphone access denied or unavailable.", "error");
             }
-        }
+        };
 
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            // Catch forwarded backend/Google API errors inside the UI
+            if (data.error) {
+                triggerNotification("Google API Error: " + data.error, "error");
+                return;
+            }
+
+            if (data.isFinal) {
+                finalizedText += data.transcript + " ";
+                document.getElementById("transcript").value = finalizedText;
+            } else {
+                document.getElementById("transcript").value = finalizedText + data.transcript;
+            }
+        };
+
+        socket.onerror = () => triggerNotification("Backend server connection failed.", "error");
+        
+    } catch (err) {
+        console.error(err);
+        triggerNotification("Failed to start audio connection setup stream.", "error");
+    }
+}
+        
         async function startTest() {
             if (testCount >= MAX_FREE_TESTS && !isLoggedIn) {
                 openModal('limitModal');
