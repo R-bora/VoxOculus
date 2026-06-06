@@ -384,13 +384,13 @@
         socket = new WebSocket('https://voxoculus.onrender.com');
         
         // 2. Wait until the WebSocket is fully OPEN before firing up the recorder
+ // 2. Wait until the WebSocket is fully OPEN before firing up the recorder
         socket.onopen = async () => {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(localStream, { mimeType: 'audio/webm;codecs=opus' });
                 
                 mediaRecorder.ondataavailable = (event) => {
-                    // This now guarantees the container header chunk is safely delivered
                     if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
                         socket.send(event.data);
                     }
@@ -398,12 +398,43 @@
                 
                 mediaRecorder.start(250); 
                 console.log("🎙️ Microphone streaming safely initialized.");
+
+                // 🚀 START THE 10-SECOND COUNTDOWN NOW BECAUSE THE CONNECTION IS READY!
+                let time = 10;
+                document.getElementById("countdown").innerText = `Starting in ${time}s...`;
+
+                recordingTimer = setInterval(() => {
+                    time--;
+                    document.getElementById("countdown").innerText = `Starting in ${time}s...`;
+
+                    if (time <= 0) {
+                        clearInterval(recordingTimer);
+                        document.getElementById("countdown").innerText = `🎤 Live Tracking Active...`;
+
+                        document.getElementById("start-btn").style.display = "none";
+                        document.getElementById("stop-btn").style.display = "block";
+
+                        recordingStartTime = Date.now();
+                        isTrackingActive = true;
+                        eyeContactChecks = 0;
+                        successfulEyeContacts = 0;
+
+                        visionInterval = setInterval(() => {
+                            if (isTrackingActive) {
+                                eyeContactChecks++;
+                                if (isLookingAtCamera) successfulEyeContacts++;
+                            }
+                        }, 1000);
+                    }
+                }, 1000);
+
             } catch (micErr) {
                 console.error(micErr);
                 triggerNotification("Microphone access denied or unavailable.", "error");
+                document.getElementById("start-btn").disabled = false;
             }
         };
-
+        
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             
@@ -437,42 +468,15 @@ async function startTest() {
 
             document.getElementById("analysis-card").style.display = "none";
             document.getElementById("start-btn").disabled = true;
+            
+            // Show a loading status instead of counting down immediately ⏳
+            document.getElementById("countdown").innerText = `Connecting to server... Please wait ⏳`;
 
             const dynamicTopic = fetchLiveTrendingTopic();
             document.getElementById("topic").innerText = dynamicTopic;
 
-            let time = 10;
-            document.getElementById("countdown").innerText = `Starting in ${time}s...`;
-
-            // 1. START CONNECTION IMMEDIATELY HERE (Pre-warming in the background) 🚀
+            // Start connecting. The countdown will trigger automatically once connected!
             startGoogleStreaming();
-
-            recordingTimer = setInterval(() => {
-                time--;
-                document.getElementById("countdown").innerText = `Starting in ${time}s...`;
-
-                if (time <= 0) {
-                    clearInterval(recordingTimer);
-                    document.getElementById("countdown").innerText = `🎤 Live Tracking Active...`;
-
-                    document.getElementById("start-btn").style.display = "none";
-                    document.getElementById("stop-btn").style.display = "block";
-
-                    recordingStartTime = Date.now();
-                    isTrackingActive = true;
-                    eyeContactChecks = 0;
-                    successfulEyeContacts = 0;
-
-                    visionInterval = setInterval(() => {
-                        if (isTrackingActive) {
-                            eyeContactChecks++;
-                            if (isLookingAtCamera) successfulEyeContacts++;
-                        }
-                    }, 1000);
-                    
-                    // (Old location of startGoogleStreaming was removed from here)
-                }
-            }, 1000);
         }
 
               function stopRecording() {
