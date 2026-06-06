@@ -428,8 +428,8 @@
         triggerNotification("Failed to start audio connection setup stream.", "error");
     }
 }
-        
-        async function startTest() {
+       
+async function startTest() {
             if (testCount >= MAX_FREE_TESTS && !isLoggedIn) {
                 openModal('limitModal');
                 return;
@@ -443,6 +443,9 @@
 
             let time = 10;
             document.getElementById("countdown").innerText = `Starting in ${time}s...`;
+
+            // 1. START CONNECTION IMMEDIATELY HERE (Pre-warming in the background) 🚀
+            startGoogleStreaming();
 
             recordingTimer = setInterval(() => {
                 time--;
@@ -466,13 +469,13 @@
                             if (isLookingAtCamera) successfulEyeContacts++;
                         }
                     }, 1000);
-
-                    startGoogleStreaming();
+                    
+                    // (Old location of startGoogleStreaming was removed from here)
                 }
             }, 1000);
         }
 
-        function stopRecording() {
+              function stopRecording() {
             isTrackingActive = false;
             clearInterval(visionInterval);
             
