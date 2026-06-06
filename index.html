@@ -34,15 +34,28 @@
         .nav-brand { font-size: 20px; font-weight: bold; color: #f7c948; white-space: nowrap; transition: transform 0.3s; }
         .nav-brand:hover { transform: scale(1.03); }
         .nav-links { display: flex; align-items: center; gap: 20px; }
-        .nav-links a { color: white; text-decoration: none; font-size: 16px; position: relative; transition: color 0.3s; }
-        .nav-links a:hover { color: #f7c948; }
         
         .login-btn {
             background: transparent; border: 2px solid #f7c948; color: #f7c948;
             padding: 8px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.4s;
         }
         .login-btn:hover { background: #f7c948; color: #16213e; box-shadow: 0 0 15px rgba(247, 201, 72, 0.4); }
-        .user-greeting { display: none; color: #4cd137; font-weight: bold; }
+        
+        /* Gmail Style Rounded Profile Avatar */
+        .user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 2px solid #f7c948;
+            object-fit: cover;
+            display: none;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .user-avatar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(247, 201, 72, 0.5);
+        }
 
         /* Responsive Mobile Hamburger Menu */
         .hamburger {
@@ -64,6 +77,7 @@
                 gap: 20px;
                 box-shadow: 0 10px 20px rgba(0,0,0,0.5);
                 border-bottom: 2px solid #2a3b5c;
+                align-items: flex-end;
             }
             .nav-links.active { display: flex; }
         }
@@ -129,9 +143,8 @@
             <span></span><span></span><span></span>
         </button>
         <div class="nav-links" id="nav-links">
-            <a href="#app" onclick="toggleMobileMenu()">Test</a>
-            <span id="user-greeting" class="user-greeting">Hello, User!</span>
             <button id="nav-login-btn" class="login-btn" onclick="openModal('loginModal')">Log In</button>
+            <img id="user-avatar" class="user-avatar" src="https://lh3.googleusercontent.com/a/default-user=s80-p" alt="User Profile Image" title="Logged in demo user account">
         </div>
     </nav>
 
@@ -273,8 +286,11 @@
                 isLoggedIn = true;
                 localStorage.setItem('voiceAnalyzer_isLoggedIn', 'true');
                 closeModal('loginModal');
+                
+                // UI Toggle adjustments for profile avatar updates
                 document.getElementById('nav-login-btn').style.display = 'none';
-                document.getElementById('user-greeting').style.display = 'inline-block';
+                document.getElementById('user-avatar').style.display = 'inline-block';
+                
                 document.getElementById('test-counter-display').innerText = "Unlimited Tests Unlocked! 🚀";
                 document.getElementById('test-counter-display').style.color = "#4cd137";
                 triggerNotification("Logged in seamlessly as Demo User.", "success");
@@ -290,7 +306,52 @@
                 "What measures should modern smart cities adopt to handle energy challenges?",
                 "Share your thoughts on the rapid evolution of artificial intelligence in healthcare.",
                 "Discuss the implications of commercial space travel on global economics.",
-                "Analyze the role of cybersecurity in an increasingly interconnected world."
+                "Analyze the role of cybersecurity in an increasingly interconnected world.",
+                "The evolution of social media and its impact on personal communication.",
+                "How virtual reality environments are redefining modern digital education setups.",
+                "The core importance of structured financial literacy education classes for young adults.",
+                "How ongoing global biodiversity loss patterns affect agricultural output predictability.",
+                "The rise of distributed renewable energy networks and their grids over the next decade.",
+                "Discuss the ethical boundary standards surrounding modern automated target algorithms.",
+                "The deep direct impact of ultra-fast consumption fashion trends on resource sustainability.",
+                "How predictive automation systems and conversational models alter modern workspace dynamics.",
+                "The specific neurological role of artistic expression media in supporting community health.",
+                "Discuss the structural applications of competitive game design loops across consumer apps.",
+                "How macro supply chain tracking ecosystems build resilience against unforeseen blockages.",
+                "The historical significance of international collaborative achievements in orbit operations.",
+                "Analyze the complete structural advantages and distribution downsides of fully digital currency ecosystems.",
+                "How urban public transit systems use high-throughput analytics to mitigate vehicle delays.",
+                "The fundamental mechanics behind using compelling narratives to change consumer perceptions.",
+                "How targeted plastic capture tech changes the preservation prospects of coastal waters.",
+                "The psychological impacts of structural layout designs and illumination on workforce productivity.",
+                "Discuss why active localized language archiving steps are pivotal to global heritage systems.",
+                "How deep underwater exploratory probes expand our collection of biochemical discoveries.",
+                "The architectural challenges and resource savings of multi-tier vertical urban farms.",
+                "The systematic practice of objective source evaluation in media landscapes.",
+                "How designated open-air green belts upgrade civic well-being across high-density metro centers.",
+                "The steady path of medical sensory metrics integration within ordinary consumer devices.",
+                "Discuss the influence of coordinated community asset support programs on civic stability.",
+                "How computational quantum frameworks stand to reshape advanced cryptographic defenses.",
+                "The long-term effects of embedded commercial modules on digital entertainment content delivery.",
+                "The functional cognitive upsides derived from masterfully acquiring alternate spoken languages.",
+                "How low-impact eco-tourism programs protect endangered ecological wildlife zones.",
+                "The shifting operational profile of regional public galleries acting as micro education hubs.",
+                "How structural work environments are morphing to meet evolving professional standards.",
+                "The quantifiable stress reduction yields of instructional breathing intervals inside academic tracks.",
+                "How desalination processing developments offer remedies for structural clean water shortfalls.",
+                "The generational shift from localized physical print platforms to hyper-distributed logs.",
+                "Discuss how intelligent driving arrays modify logistics planning windows inside transit lines.",
+                "The historical efficacy of international athletics tournaments in modifying diplomatic relationships.",
+                "How digital sales integration structures empower hyper-localized artisan merchant systems.",
+                "The core civic requirement of open journalistic updates in tracking public resource actions.",
+                "How automated design tools influence standard artistic production routines inside production houses.",
+                "The physical engineering hurdles encountered while clearing orbital debris pathways safely.",
+                "The data collection values achieved by distributing environmental sampling metrics to regular citizens.",
+                "How modern architectural structural plans adjust around shifting severe environment variables.",
+                "The instructional value of regular structural peer-guided advisory networks inside academies.",
+                "How permanent high-fidelity electronic archiving protects global historical files against physical decay.",
+                "Discuss the base human necessity of providing permanent pipeline structures for pure water delivery.",
+                "The societal value of modern digital libraries functioning as community-access tech incubators."
             ];
             const chosenTopic = topics[Math.floor(Math.random() * topics.length)];
             currentRawPromptTopic = chosenTopic;
@@ -300,9 +361,12 @@
         window.addEventListener('DOMContentLoaded', () => {
             if (isLoggedIn) {
                 document.getElementById('nav-login-btn').style.display = 'none';
-                document.getElementById('user-greeting').style.display = 'inline-block';
+                document.getElementById('user-avatar').style.display = 'inline-block';
                 document.getElementById('test-counter-display').innerText = "Unlimited Tests Unlocked! 🚀";
+                document.getElementById('test-counter-display').style.color = "#4cd137";
             } else {
+                document.getElementById('nav-login-btn').style.display = 'inline-block';
+                document.getElementById('user-avatar').style.display = 'none';
                 document.getElementById("test-counter-display").innerText = `Tests taken: ${testCount} / ${MAX_FREE_TESTS} (Free)`;
             }
             initializeVisionSystem();
@@ -313,7 +377,6 @@
             faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
             faceMesh.onResults(onResults);
 
-            // Added ideal mobile constraints configuration safely inside initialization helper
             const camera = new Camera(webcamVideo, {
                 onFrame: async () => { await faceMesh.send({ image: webcamVideo }); },
                 width: { ideal: 640 },
@@ -356,7 +419,6 @@
                 canvasContext.fillStyle = isLookingForward ? '#4cd137' : '#f7c948';
                 canvasContext.font = "bold 16px Arial";
                 
-                // Text stays legible because scale values map cleanly within the video wrapper container limits
                 canvasContext.fillText(isLookingForward ? "🎯 EYE CONTACT" : "⚠️ LOOKING AWAY", 20, 30);
 
                 canvasContext.beginPath();
@@ -376,91 +438,86 @@
         }
 
         async function startGoogleStreaming() {
-    finalizedText = "";
-    document.getElementById("transcript").value = "";
+            finalizedText = "";
+            document.getElementById("transcript").value = "";
 
-    try {
-        // 1. Establish connection first
-        socket = new WebSocket('https://voxoculus.onrender.com');
-        
-        // 2. Wait until the WebSocket is fully OPEN before firing up the recorder
- // 2. Wait until the WebSocket is fully OPEN before firing up the recorder
-        socket.onopen = async () => {
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(localStream, { mimeType: 'audio/webm;codecs=opus' });
+                socket = new WebSocket('https://voxoculus.onrender.com');
                 
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
-                        socket.send(event.data);
+                socket.onopen = async () => {
+                    try {
+                        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        mediaRecorder = new MediaRecorder(localStream, { mimeType: 'audio/webm;codecs=opus' });
+                        
+                        mediaRecorder.ondataavailable = (event) => {
+                            if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
+                                socket.send(event.data);
+                            }
+                        };
+                        
+                        mediaRecorder.start(250); 
+                        console.log("🎙️ Microphone streaming safely initialized.");
+
+                        let time = 10;
+                        document.getElementById("countdown").innerText = `Starting in ${time}s...`;
+
+                        recordingTimer = setInterval(() => {
+                            time--;
+                            document.getElementById("countdown").innerText = `Starting in ${time}s...`;
+
+                            if (time <= 0) {
+                                clearInterval(recordingTimer);
+                                document.getElementById("countdown").innerText = `🎤 Live Tracking Active...`;
+
+                                document.getElementById("start-btn").style.display = "none";
+                                document.getElementById("stop-btn").style.display = "block";
+
+                                recordingStartTime = Date.now();
+                                isTrackingActive = true;
+                                eyeContactChecks = 0;
+                                successfulEyeContacts = 0;
+
+                                visionInterval = setInterval(() => {
+                                    if (isTrackingActive) {
+                                        eyeContactChecks++;
+                                        if (isLookingAtCamera) successfulEyeContacts++;
+                                    }
+                                }, 1000);
+                            }
+                        }, 1000);
+
+                    } catch (micErr) {
+                        console.error(micErr);
+                        triggerNotification("Microphone access denied or unavailable.", "error");
+                        document.getElementById("start-btn").disabled = false;
                     }
                 };
                 
-                mediaRecorder.start(250); 
-                console.log("🎙️ Microphone streaming safely initialized.");
-
-                // 🚀 START THE 10-SECOND COUNTDOWN NOW BECAUSE THE CONNECTION IS READY!
-                let time = 10;
-                document.getElementById("countdown").innerText = `Starting in ${time}s...`;
-
-                recordingTimer = setInterval(() => {
-                    time--;
-                    document.getElementById("countdown").innerText = `Starting in ${time}s...`;
-
-                    if (time <= 0) {
-                        clearInterval(recordingTimer);
-                        document.getElementById("countdown").innerText = `🎤 Live Tracking Active...`;
-
-                        document.getElementById("start-btn").style.display = "none";
-                        document.getElementById("stop-btn").style.display = "block";
-
-                        recordingStartTime = Date.now();
-                        isTrackingActive = true;
-                        eyeContactChecks = 0;
-                        successfulEyeContacts = 0;
-
-                        visionInterval = setInterval(() => {
-                            if (isTrackingActive) {
-                                eyeContactChecks++;
-                                if (isLookingAtCamera) successfulEyeContacts++;
-                            }
-                        }, 1000);
+                socket.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.error) {
+                        triggerNotification("Google API Error: " + data.error, "error");
+                        return;
                     }
-                }, 1000);
 
-            } catch (micErr) {
-                console.error(micErr);
-                triggerNotification("Microphone access denied or unavailable.", "error");
-                document.getElementById("start-btn").disabled = false;
-            }
-        };
-        
-        socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            
-            // Catch forwarded backend/Google API errors inside the UI
-            if (data.error) {
-                triggerNotification("Google API Error: " + data.error, "error");
-                return;
-            }
+                    if (data.isFinal) {
+                        finalizedText += data.transcript + " ";
+                        document.getElementById("transcript").value = finalizedText;
+                    } else {
+                        document.getElementById("transcript").value = finalizedText + data.transcript;
+                    }
+                };
 
-            if (data.isFinal) {
-                finalizedText += data.transcript + " ";
-                document.getElementById("transcript").value = finalizedText;
-            } else {
-                document.getElementById("transcript").value = finalizedText + data.transcript;
+                socket.onerror = () => triggerNotification("Backend server connection failed.", "error");
+                
+            } catch (err) {
+                console.error(err);
+                triggerNotification("Failed to start audio connection setup stream.", "error");
             }
-        };
-
-        socket.onerror = () => triggerNotification("Backend server connection failed.", "error");
-        
-    } catch (err) {
-        console.error(err);
-        triggerNotification("Failed to start audio connection setup stream.", "error");
-    }
-}
-       
-async function startTest() {
+        }
+               
+        async function startTest() {
             if (testCount >= MAX_FREE_TESTS && !isLoggedIn) {
                 openModal('limitModal');
                 return;
@@ -469,17 +526,15 @@ async function startTest() {
             document.getElementById("analysis-card").style.display = "none";
             document.getElementById("start-btn").disabled = true;
             
-            // Show a loading status instead of counting down immediately ⏳
             document.getElementById("countdown").innerText = `Connecting to server... Please wait ⏳`;
 
             const dynamicTopic = fetchLiveTrendingTopic();
             document.getElementById("topic").innerText = dynamicTopic;
 
-            // Start connecting. The countdown will trigger automatically once connected!
             startGoogleStreaming();
         }
 
-              function stopRecording() {
+        function stopRecording() {
             isTrackingActive = false;
             clearInterval(visionInterval);
             
