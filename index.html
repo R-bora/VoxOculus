@@ -144,7 +144,7 @@
         </button>
         <div class="nav-links" id="nav-links">
             <button id="nav-login-btn" class="login-btn" onclick="openModal('loginModal')">Log In</button>
-            <img id="user-avatar" class="user-avatar" src="https://lh3.googleusercontent.com/a/default-user=s80-p" alt="User Profile Image" title="Logged in demo user account">
+            <img id="user-avatar" class="user-avatar" src="https://lh3.googleusercontent.com/a/default-user=s96-c" alt="User Profile Image" title="Logged in account profile profile">
         </div>
     </nav>
 
@@ -157,6 +157,18 @@
             <input type="email" id="email" placeholder="Email Address">
             <input type="password" id="password" placeholder="Password">
             <button onclick="processLogin()">Secure Login</button>
+            
+            <div style="margin: 15px 0; display: flex; align-items: center; text-align: center; color: #8892b0;">
+                <div style="flex: 1; border-bottom: 1px solid #2a3b5c;"></div>
+                <span style="padding: 0 10px; font-size: 12px;">OR</span>
+                <div style="flex: 1; border-bottom: 1px solid #2a3b5c;"></div>
+            </div>
+
+            <button onclick="processGoogleLogin()" style="background: #ffffff; color: #1f2937; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.53-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-8.81z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.11 0-5.74-2.11-6.68-4.96H1.21v3.15C3.18 21.88 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.32 14.24A7.16 7.16 0 0 1 5 12c0-.79.13-1.57.32-2.34V6.51H1.21A11.94 11.94 0 0 0 0 12c0 1.92.45 3.74 1.21 5.39l4.11-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.18 2.12 1.21 5.39l4.11 3.15c.94-2.85 3.57-4.96 6.68-4.96z"/></svg>
+                Continue with Google
+            </button>
+
             <button class="close-btn" onclick="closeModal('loginModal')">Cancel</button>
         </div>
     </div>
@@ -183,7 +195,7 @@
                 </div>
                 <div id="topic"></div>
                 <div id="countdown"></div>
-                <h2>Live Transcript (Google Cloud API)</h2>
+                <h2>Live Transcript</h2>
                 <textarea id="transcript" placeholder="Your recorded real-time speech will render here..." readonly></textarea>
             </div>
             <div class="card">
@@ -296,6 +308,19 @@
             } else {
                 triggerNotification("Invalid credentials. Use demo@voice.com", "error");
             }
+        }
+
+        function processGoogleLogin() {
+            isLoggedIn = true;
+            localStorage.setItem('voiceAnalyzer_isLoggedIn', 'true');
+            closeModal('loginModal');
+            
+            document.getElementById('nav-login-btn').style.display = 'none';
+            document.getElementById('user-avatar').style.display = 'inline-block';
+            
+            document.getElementById('test-counter-display').innerText = "Unlimited Tests Unlocked! 🚀";
+            document.getElementById('test-counter-display').style.color = "#4cd137";
+            triggerNotification("Logged in via Google Authentication.", "success");
         }
 
         function fetchLiveTrendingTopic() {
@@ -457,7 +482,6 @@
                         mediaRecorder.start(250); 
                         console.log("🎙️ Microphone streaming safely initialized.");
 
-                        // Server handshake completed! Transition explicitly to counting down.
                         let time = 10;
                         document.getElementById("countdown").innerText = `Starting in ${time}s...`;
 
@@ -533,7 +557,6 @@
             document.getElementById("analysis-card").style.display = "none";
             document.getElementById("start-btn").disabled = true;
             
-            // Set and show connecting message explicitly until socket opens successfully
             document.getElementById("countdown").innerText = `Connecting to server... Please wait ⏳`;
 
             const dynamicTopic = fetchLiveTrendingTopic();
