@@ -287,7 +287,6 @@
                 localStorage.setItem('voiceAnalyzer_isLoggedIn', 'true');
                 closeModal('loginModal');
                 
-                // UI Toggle adjustments for profile avatar updates
                 document.getElementById('nav-login-btn').style.display = 'none';
                 document.getElementById('user-avatar').style.display = 'inline-block';
                 
@@ -458,6 +457,7 @@
                         mediaRecorder.start(250); 
                         console.log("🎙️ Microphone streaming safely initialized.");
 
+                        // Server handshake completed! Transition explicitly to counting down.
                         let time = 10;
                         document.getElementById("countdown").innerText = `Starting in ${time}s...`;
 
@@ -490,6 +490,7 @@
                         console.error(micErr);
                         triggerNotification("Microphone access denied or unavailable.", "error");
                         document.getElementById("start-btn").disabled = false;
+                        document.getElementById("countdown").innerText = "❌ Mic Error";
                     }
                 };
                 
@@ -509,11 +510,17 @@
                     }
                 };
 
-                socket.onerror = () => triggerNotification("Backend server connection failed.", "error");
+                socket.onerror = () => {
+                    triggerNotification("Backend server connection failed.", "error");
+                    document.getElementById("countdown").innerText = "❌ Connection Failed";
+                    document.getElementById("start-btn").disabled = false;
+                };
                 
             } catch (err) {
                 console.error(err);
                 triggerNotification("Failed to start audio connection setup stream.", "error");
+                document.getElementById("countdown").innerText = "❌ Setup Failed";
+                document.getElementById("start-btn").disabled = false;
             }
         }
                
@@ -526,6 +533,7 @@
             document.getElementById("analysis-card").style.display = "none";
             document.getElementById("start-btn").disabled = true;
             
+            // Set and show connecting message explicitly until socket opens successfully
             document.getElementById("countdown").innerText = `Connecting to server... Please wait ⏳`;
 
             const dynamicTopic = fetchLiveTrendingTopic();
