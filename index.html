@@ -381,7 +381,7 @@
 
     try {
         // 1. Establish connection first
-        socket = new WebSocket('ws://' + window.location.hostname + ':3000');
+        socket = new WebSocket('https://voxoculus.onrender.com');
         
         // 2. Wait until the WebSocket is fully OPEN before firing up the recorder
         socket.onopen = async () => {
