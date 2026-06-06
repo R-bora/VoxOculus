@@ -30,7 +30,10 @@ wss.on('connection', (ws) => {
     if (!recognizeStream) {
       recognizeStream = speechClient
         .streamingRecognize(request)
-        .on('error', (err) => console.error('Google API Error:', err))
+        .on('error', (err) => {
+          console.error('Google API Error:', err);
+          recognizeStream = null;
+        })
         .on('data', (data) => {
           // Extract the transcript text from Google's response
           const transcript = data.results[0]?.alternatives[0]?.transcript || '';
@@ -41,10 +44,9 @@ wss.on('connection', (ws) => {
         });
     }
 
-    // Pass the raw binary audio data straight to Google ONLY if the stream is active
-if (Buffer.isBuffer(message) && recognizeStream && recognizeStream.writable) {
-  recognizeStream.write(message);
-}
+    if (Buffer.isBuffer(message) && recognizeStream && recognizeStream.writable) {
+      recognizeStream.write(message);
+    }
   });
 
   ws.on('close', () => {
