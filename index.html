@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 
     <style>
-        /* General Reset & Animated Background Gradient */
+        /* General Reset & Background */
         html { scroll-behavior: smooth; }
         body {
             font-family: Arial, sans-serif;
@@ -24,37 +24,51 @@
         /* Fixed Navigation Bar */
         .navbar {
             position: fixed; top: 0; left: 0; right: 0;
-            background: rgba(22, 33, 62, 0.85);
+            background: rgba(22, 33, 62, 0.95);
             backdrop-filter: blur(12px);
             padding: 15px 30px; display: flex; justify-content: space-between; align-items: center;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); z-index: 1000;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            box-sizing: border-box;
         }
         .nav-brand { font-size: 20px; font-weight: bold; color: #f7c948; white-space: nowrap; transition: transform 0.3s; }
         .nav-brand:hover { transform: scale(1.03); }
         .nav-links { display: flex; align-items: center; gap: 20px; }
         .nav-links a { color: white; text-decoration: none; font-size: 16px; position: relative; transition: color 0.3s; }
         .nav-links a:hover { color: #f7c948; }
-        .nav-links a::after {
-            content: ''; position: absolute; width: 100%; transform: scaleX(0); height: 2px;
-            bottom: -4px; left: 0; background-color: #f7c948; transform-origin: bottom right; transition: transform 0.25s;
-        }
-        .nav-links a:hover::after { transform: scaleX(1); transform-origin: bottom left; }
-
+        
         .login-btn {
             background: transparent; border: 2px solid #f7c948; color: #f7c948;
             padding: 8px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.4s;
         }
         .login-btn:hover { background: #f7c948; color: #16213e; box-shadow: 0 0 15px rgba(247, 201, 72, 0.4); }
-        .user-greeting { display: none; color: #4cd137; font-weight: bold; animation: fadeIn 0.5s ease forwards; }
+        .user-greeting { display: none; color: #4cd137; font-weight: bold; }
 
+        /* Responsive Mobile Hamburger Menu */
         .hamburger {
             display: none; flex-direction: column; justify-content: space-between;
             width: 28px; height: 20px; background: transparent; border: none; cursor: pointer; padding: 0; z-index: 1001;
         }
         .hamburger span { width: 100%; height: 3px; background-color: #f7c948; border-radius: 5px; transition: all 0.3s; }
 
-        /* Main Container */
+        /* Mobile Navbar Layout Updates */
+        @media (max-width: 768px) {
+            .hamburger { display: flex; }
+            .nav-links {
+                display: none;
+                flex-direction: column;
+                position: absolute;
+                top: 100%; left: 0; right: 0;
+                background: #16213e;
+                padding: 20px;
+                gap: 20px;
+                box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+                border-bottom: 2px solid #2a3b5c;
+            }
+            .nav-links.active { display: flex; }
+        }
+
+        /* Workspace & Structure Containers */
         .container { max-width: 1000px; margin: auto; padding: 20px; min-height: 80vh; }
         .workspace-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 20px; margin-top: 20px; }
 
@@ -62,82 +76,48 @@
             background: #16213e; padding: 25px; border-radius: 16px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); height: fit-content; transition: transform 0.4s, box-shadow 0.4s;
         }
-        .card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35); }
 
+        /* Video Container Mirror Setup */
         .video-container {
             position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #000; aspect-ratio: 4 / 3;
+            transform: scaleX(-1); /* Mirrors both canvas overlay and video frame fluidly together */
         }
-        .video-container::after {
-            content: ''; position: absolute; width: 100%; height: 3px;
-            background: linear-gradient(to right, transparent, rgba(247, 201, 72, 0.6), transparent);
-            animation: scanline 4s linear infinite; pointer-events: none; z-index: 4;
-        }
-        #webcam-view { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        #webcam-view { width: 100%; height: 100%; object-fit: cover; }
         #visualizer-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
 
+        /* UI elements matching standard styling layout */
         .live-status-pill {
-            position: absolute; top: 15px; left: 15px; background: rgba(233, 69, 96, 0.85); color: white;
+            position: absolute; top: 15px; right: 15px; background: rgba(233, 69, 96, 0.85); color: white;
             padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; z-index: 10;
-            display: flex; align-items: center; gap: 6px; transition: background-color 0.4s;
+            display: flex; align-items: center; gap: 6px; transform: scaleX(-1); /* Keeps status text un-reversed */
         }
         .live-status-pill .pulse-dot { width: 8px; height: 8px; background-color: #fff; border-radius: 50%; animation: pulse 1.5s infinite; }
 
         @keyframes pulse { 0% { transform: scale(0.8); opacity: 0.3; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(0.8); opacity: 0.3; } }
-        @keyframes scanline { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-
-        button {
-            background: #f7c948; border: none; padding: 12px 22px; border-radius: 10px; font-weight: bold; font-size: 16px;
-            cursor: pointer; color: #16213e; transition: transform 0.1s, background-color 0.3s, box-shadow 0.3s;
-        }
-        button:hover:not(:disabled) { box-shadow: 0 5px 15px rgba(247, 201, 72, 0.3); }
-        button:active { transform: scale(0.95); }
-        button:disabled { background: #555; color: #888; cursor: not-allowed; }
         #stop-btn { background: #e94560; color: white; display: none; }
-        #stop-btn:hover { box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4); }
-
+        button { background: #f7c948; border: none; padding: 12px 22px; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; color: #16213e; }
+        button:disabled { background: #555; color: #888; cursor: not-allowed; }
+        
         .test-counter { font-size: 14px; color: #8892b0; margin-top: 10px; }
-        #topic { font-size: 22px; color: #f7c948; margin: 20px 0 10px 0; line-height: 1.4; }
-        #countdown { font-size: 32px; font-weight: bold; margin-bottom: 15px; transition: color 0.3s; }
+        #topic { font-size: 22px; color: #f7c948; margin: 20px 0 10px 0; }
+        #countdown { font-size: 32px; font-weight: bold; margin-bottom: 15px; }
+        textarea { width: 100%; height: 120px; margin-top: 15px; background: #0b1020; color: white; border: 1px solid #2a3b5c; border-radius: 8px; padding: 15px; font-size: 16px; box-sizing: border-box; resize: vertical; }
 
-        textarea {
-            width: 100%; height: 120px; margin-top: 15px; background: #0b1020; color: white; border: 1px solid #2a3b5c;
-            border-radius: 8px; padding: 15px; font-size: 16px; box-sizing: border-box; resize: vertical; transition: border-color 0.3s, box-shadow 0.3s;
-        }
-        textarea:focus { outline: none; border-color: #f7c948; box-shadow: 0 0 10px rgba(247, 201, 72, 0.15); }
-
-        #analysis-card { display: none; margin-top: 20px; animation: fadeIn 0.6s forwards; }
+        #analysis-card { display: none; margin-top: 20px; }
         .analysis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
-        .stat-box { background: #0b1020; border: 1px solid #2a3b5c; padding: 20px; border-radius: 12px; text-align: center; transition: transform 0.3s; }
-        .stat-box:hover { transform: scale(1.02); border-color: #4a6296; }
-        .stat-title { font-size: 14px; color: #8892b0; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-box { background: #0b1020; border: 1px solid #2a3b5c; padding: 20px; border-radius: 12px; text-align: center; }
+        .stat-title { font-size: 14px; color: #8892b0; text-transform: uppercase; }
         .stat-value { font-size: 32px; font-weight: bold; color: #f7c948; margin-top: 10px; }
+        .overall-score-container { margin-top: 25px; padding: 25px; background: linear-gradient(135deg, #f7c948 0%, #f9a826 100%); border-radius: 12px; text-align: center; color: #16213e; }
+        .overall-score-value { font-size: 48px; font-weight: bold; margin-top: 5px; }
 
-        .overall-score-container { margin-top: 25px; padding: 25px; background: linear-gradient(135deg, #f7c948 0%, #f9a826 100%); border-radius: 12px; text-align: center; color: #16213e; position: relative; overflow: hidden; }
-        .overall-score-container::before { content: ''; position: absolute; top: 0; left: 0; width: 200%; height: 100%; background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.25), transparent); animation: shimmer 3.5s infinite linear; }
-        .overall-score-title { font-size: 18px; font-weight: bold; text-transform: uppercase; z-index: 2; position: relative; }
-        .overall-score-value { font-size: 48px; font-weight: bold; margin-top: 5px; z-index: 2; position: relative; }
-
-        .content-section { padding: 60px 20px; max-width: 900px; margin: auto; border-top: 1px solid #2a3b5c; }
-
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(4px); opacity: 0; transition: opacity 0.3s; }
-        .modal-overlay.open { opacity: 1; }
-        .modal-box { background: #16213e; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; transform: scale(0.85); transition: transform 0.3s; }
-        .modal-overlay.open .modal-box { transform: scale(1); }
-        .modal-box h2 { margin-top: 0; color: #f7c948; }
-        .modal-box p { color: #d1d5db; line-height: 1.5; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        .modal-box { background: #16213e; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; }
         .modal-box input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #2a3b5c; background: #0b1020; color: white; box-sizing: border-box; }
-        .modal-box input:focus { outline: none; border-color: #f7c948; }
-        .modal-box button { width: 100%; margin-top: 10px; }
         .close-btn { background: transparent; color: #8892b0; margin-top: 15px; padding: 0; font-size: 14px; }
-        .close-btn:hover { color: white; background: transparent; }
 
         .notification-container { position: fixed; bottom: 25px; right: 25px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        .toast-notification { background: #16213e; border-left: 4px solid #f7c948; color: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4); display: flex; align-items: center; gap: 12px; font-size: 15px; min-width: 280px; max-width: 400px; transform: translateX(120%); transition: transform 0.4s, opacity 0.3s; opacity: 0; }
-        .toast-notification.show { transform: translateX(0); opacity: 1; }
-        .toast-notification.success { border-left-color: #4cd137; }
-        .toast-notification.error { border-left-color: #e94560; }
+        .toast-notification { background: #16213e; border-left: 4px solid #f7c948; color: white; padding: 15px 25px; border-radius: 8px; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
     </style>
 </head>
 
@@ -145,12 +125,11 @@
 
     <nav class="navbar">
         <div class="nav-brand">🎙️ Voice & Vision Analyzer</div>
-        <button class="hamburger" id="mobile-menu-btn">
+        <button class="hamburger" id="mobile-menu-btn" onclick="toggleMobileMenu()">
             <span></span><span></span><span></span>
         </button>
         <div class="nav-links" id="nav-links">
-            <a href="#app">Test</a>
-            <a href="#features">Features</a>
+            <a href="#app" onclick="toggleMobileMenu()">Test</a>
             <span id="user-greeting" class="user-greeting">Hello, User!</span>
             <button id="nav-login-btn" class="login-btn" onclick="openModal('loginModal')">Log In</button>
         </div>
@@ -234,7 +213,7 @@
         </div>
     </div>
 
-    <script src="script.js">
+    <script>
         // --- System Variables ---
         let testCount = parseInt(localStorage.getItem('voiceAnalyzer_testCount')) || 0;
         const MAX_FREE_TESTS = 3;
@@ -245,7 +224,7 @@
         let socket;
         let localStream;
         let mediaRecorder;
-        let finalizedText = ""; // Holds completed sentences
+        let finalizedText = ""; 
         let recordingStartTime;
         let recordingTimer;
 
@@ -259,7 +238,11 @@
         const visualizerCanvas = document.getElementById('visualizer-canvas');
         const canvasContext = visualizerCanvas.getContext('2d');
 
-        // --- Core UI Functions ---
+        function toggleMobileMenu() {
+            const links = document.getElementById('nav-links');
+            links.classList.toggle('active');
+        }
+
         function triggerNotification(message, type = 'info') {
             const container = document.getElementById('notification-zone');
             const toast = document.createElement('div');
@@ -267,28 +250,20 @@
             let icon = type === 'success' ? "✅" : (type === 'error' ? "⚠️" : "ℹ️");
             toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
             container.appendChild(toast);
-            setTimeout(() => toast.classList.add('show'), 50);
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 400);
-            }, 4000);
+            setTimeout(() => toast.remove(), 4000);
         }
 
         function openModal(modalId) {
-            const modal = document.getElementById(modalId);
-            modal.style.display = 'flex';
-            setTimeout(() => modal.classList.add('open'), 10);
+            document.getElementById(modalId).style.display = 'flex';
         }
 
         function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            modal.classList.remove('open');
-            setTimeout(() => modal.style.display = 'none', 300);
+            document.getElementById(modalId).style.display = 'none';
         }
 
         function switchToLogin() {
             closeModal('limitModal');
-            setTimeout(() => openModal('loginModal'), 350);
+            openModal('loginModal');
         }
 
         function processLogin() {
@@ -308,7 +283,6 @@
             }
         }
 
-        // --- INSTANT Topic Generator ---
         function fetchLiveTrendingTopic() {
             const topics = [
                 "Discuss the global economic shift toward alternative clean technologies.",
@@ -323,7 +297,6 @@
             return chosenTopic;
         }
 
-        // --- Vision System (MediaPipe) ---
         window.addEventListener('DOMContentLoaded', () => {
             if (isLoggedIn) {
                 document.getElementById('nav-login-btn').style.display = 'none';
@@ -340,9 +313,12 @@
             faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
             faceMesh.onResults(onResults);
 
+            // Added ideal mobile constraints configuration safely inside initialization helper
             const camera = new Camera(webcamVideo, {
                 onFrame: async () => { await faceMesh.send({ image: webcamVideo }); },
-                width: 640, height: 480
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                facingMode: 'user'
             });
 
             camera.start().then(() => {
@@ -350,7 +326,10 @@
                 document.getElementById('vision-status-text').innerText = "ML TRACKING ACTIVE";
                 fitCanvasCoordinates();
                 window.addEventListener('resize', fitCanvasCoordinates);
-            }).catch(() => triggerNotification("Camera blocked. Please grant access.", "error"));
+            }).catch((err) => {
+                console.error(err);
+                triggerNotification("Camera blocked or unavailable.", "error");
+            });
         }
 
         function onResults(results) {
@@ -371,19 +350,18 @@
                 const topToNose = Math.abs(nose.y - topForehead.y);
                 const pitchRatio = topToNose / faceHeight;
 
-                const isLookingForward = (yawRatio > 0.40 && yawRatio < 0.60) && (pitchRatio > 0.40 && pitchRatio < 0.60);
+                const isLookingForward = (yawRatio > 0.38 && yawRatio < 0.62) && (pitchRatio > 0.38 && pitchRatio < 0.62);
                 isLookingAtCamera = isLookingForward;
 
                 canvasContext.fillStyle = isLookingForward ? '#4cd137' : '#f7c948';
                 canvasContext.font = "bold 16px Arial";
+                
+                // Text stays legible because scale values map cleanly within the video wrapper container limits
                 canvasContext.fillText(isLookingForward ? "🎯 EYE CONTACT" : "⚠️ LOOKING AWAY", 20, 30);
 
-                canvasContext.shadowBlur = 10;
-                canvasContext.shadowColor = isLookingForward ? '#4cd137' : '#e94560';
                 canvasContext.beginPath();
-                canvasContext.arc(nose.x * visualizerCanvas.width, nose.y * visualizerCanvas.height, 5, 0, 2 * Math.PI);
+                canvasContext.arc(nose.x * visualizerCanvas.width, nose.y * visualizerCanvas.height, 6, 0, 2 * Math.PI);
                 canvasContext.fill();
-                canvasContext.shadowBlur = 0;
             } else {
                 isLookingAtCamera = false;
                 canvasContext.fillStyle = '#e94560';
@@ -393,29 +371,19 @@
         }
 
         function fitCanvasCoordinates() {
-            visualizerCanvas.width = webcamVideo.offsetWidth;
-            visualizerCanvas.height = webcamVideo.offsetHeight;
+            visualizerCanvas.width = webcamVideo.clientWidth;
+            visualizerCanvas.height = webcamVideo.clientHeight;
         }
 
-        // --- Google Cloud WebSocket Audio Streaming ---
         async function startGoogleStreaming() {
             finalizedText = "";
             document.getElementById("transcript").value = "";
 
             try {
-                // Connect to your local backend server
-                socket = new WebSocket('ws://localhost:3000');
+                socket = new WebSocket('ws://' + window.location.hostname + ':3000');
                 
-                socket.onopen = () => console.log("WebSocket connection established");
-                socket.onerror = (error) => {
-                    console.error("WebSocket error:", error);
-                    triggerNotification("Cannot connect to local server. Is server.js running?", "error");
-                };
-
                 socket.onmessage = (event) => {
                     const data = JSON.parse(event.data);
-                    
-                    // Smoothly combine finished sentences with current spoken guesses
                     if (data.isFinal) {
                         finalizedText += data.transcript + " ";
                         document.getElementById("transcript").value = finalizedText;
@@ -423,6 +391,8 @@
                         document.getElementById("transcript").value = finalizedText + data.transcript;
                     }
                 };
+
+                socket.onerror = () => triggerNotification("Backend server connection failed.", "error");
 
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(localStream, { mimeType: 'audio/webm;codecs=opus' });
@@ -433,15 +403,13 @@
                     }
                 };
                 
-                // Send an audio slice every 100 milliseconds for fast responsiveness
-                mediaRecorder.start(100); 
+                mediaRecorder.start(250); 
             } catch (err) {
-                console.error("Microphone or Socket Error:", err);
-                triggerNotification("Failed to start audio stream.", "error");
+                console.error(err);
+                triggerNotification("Failed to start audio connection setup stream.", "error");
             }
         }
 
-        // --- Test Pipeline ---
         async function startTest() {
             if (testCount >= MAX_FREE_TESTS && !isLoggedIn) {
                 openModal('limitModal');
@@ -456,7 +424,6 @@
 
             let time = 10;
             document.getElementById("countdown").innerText = `Starting in ${time}s...`;
-            document.getElementById("countdown").style.color = "#f7c948";
 
             recordingTimer = setInterval(() => {
                 time--;
@@ -465,13 +432,9 @@
                 if (time <= 0) {
                     clearInterval(recordingTimer);
                     document.getElementById("countdown").innerText = `🎤 Live Tracking Active...`;
-                    document.getElementById("countdown").style.color = "#e94560";
 
                     document.getElementById("start-btn").style.display = "none";
                     document.getElementById("stop-btn").style.display = "block";
-
-                    document.getElementById('vision-status-pill').style.backgroundColor = '#e94560';
-                    document.getElementById('vision-status-text').innerText = "RECORDING AUDIO & VISION";
 
                     recordingStartTime = Date.now();
                     isTrackingActive = true;
@@ -485,7 +448,6 @@
                         }
                     }, 1000);
 
-                    // Start the Google Backend Stream
                     startGoogleStreaming();
                 }
             }, 1000);
@@ -495,7 +457,6 @@
             isTrackingActive = false;
             clearInterval(visionInterval);
             
-            // Safely close the Google Audio Stream
             if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
             if (localStream) localStream.getTracks().forEach(track => track.stop());
             if (socket) socket.close();
@@ -505,19 +466,14 @@
             if (!isLoggedIn) document.getElementById("test-counter-display").innerText = `Tests taken: ${testCount} / ${MAX_FREE_TESTS} (Free)`;
 
             document.getElementById("countdown").innerText = "✅ Analysis Complete";
-            document.getElementById("countdown").style.color = "#4cd137";
             document.getElementById("start-btn").style.display = "block";
             document.getElementById("start-btn").innerText = "Retake Test";
             document.getElementById("start-btn").disabled = false;
             document.getElementById("stop-btn").style.display = "none";
 
-            document.getElementById('vision-status-pill').style.backgroundColor = 'rgba(76, 209, 55, 0.85)';
-            document.getElementById('vision-status-text').innerText = "ML TRACKING ACTIVE";
-
             analyzeSpeech();
         }
 
-        // --- Analysis Engine ---
         function analyzeSpeech() {
             const text = document.getElementById("transcript").value.trim();
             const durationSeconds = Math.max((Date.now() - recordingStartTime) / 1000, 1);
